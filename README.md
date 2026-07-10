@@ -74,6 +74,7 @@ src/
 │   └── research.ts           # поиск и сбор отчёта
 └── utils.ts                  # обработка текста и имён файлов
 tests/                        # unit-тесты
+docs/ACTIONS.md               # действия пользователя и сценарии
 docs/DEPLOYMENT.md            # развёртывание
 ```
 
@@ -87,7 +88,10 @@ Wikipedia — стартовая точка, а не первичный исто
 
 Инструкции для systemd и Docker Compose находятся в [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
+## Документация действий
+
+Пошаговое описание кнопок, команд, результатов, ошибок и проверочного сценария находится в [docs/ACTIONS.md](docs/ACTIONS.md).
+
 ## Лицензия
 
 [MIT](LICENSE)
-
