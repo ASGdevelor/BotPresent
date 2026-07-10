@@ -1,19 +1,27 @@
 import { createBot } from "./bot";
 import { loadConfig } from "./config";
 
-const config = loadConfig();
-const bot = createBot(config.botToken);
+async function main(): Promise<void> {
+  try {
+    const config = loadConfig();
+    const bot = createBot(config.botToken);
 
-await bot.api.setMyCommands([
-  { command: "start", description: "Запустить бота" },
-  { command: "menu", description: "Показать главное меню" },
-  { command: "cancel", description: "Отменить текущее действие" },
-]);
+    process.once("SIGINT", () => bot.stop());
+    process.once("SIGTERM", () => bot.stop());
 
-bot.start({
-  onStart: (botInfo) => console.log(`Bot @${botInfo.username} started`),
-});
+    await bot.api.setMyCommands([
+      { command: "start", description: "Запустить бота" },
+      { command: "menu", description: "Показать главное меню" },
+      { command: "cancel", description: "Отменить текущее действие" },
+    ]);
 
-process.once("SIGINT", () => bot.stop());
-process.once("SIGTERM", () => bot.stop());
+    await bot.start({
+      onStart: (botInfo) => console.log(`Bot @${botInfo.username} started`),
+    });
+  } catch (error) {
+    console.error("Bot startup failed", error);
+    process.exitCode = 1;
+  }
+}
 
+await main();

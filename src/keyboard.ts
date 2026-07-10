@@ -5,8 +5,7 @@ export function createMainKeyboard(): Keyboard {
   return new Keyboard()
     .text(BUTTONS.presentation)
     .row()
-    .text(BUTTONS.research)
+    .text(BUTTONS.leadGeneration)
     .resized()
     .persistent();
 }
-

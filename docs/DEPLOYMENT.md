@@ -44,7 +44,7 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-Бот использует long polling, поэтому домен, HTTPS и открытый входящий порт не нужны. Для исследования серверу требуется исходящий HTTPS-доступ к `ru.wikipedia.org` и Telegram API.
+Бот использует long polling, поэтому домен, HTTPS и открытый входящий порт не нужны. Для лидогенерации серверу требуется исходящий HTTPS-доступ к Telegram API, поисковой выдаче Bing и анализируемым публичным сайтам.
 
 ## Обновление
 
@@ -54,4 +54,3 @@ bun install --frozen-lockfile
 bun run check
 sudo systemctl restart bot-present
 ```
-

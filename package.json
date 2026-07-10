@@ -1,8 +1,8 @@
 {
   "name": "bot-present",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Telegram-бот для создания презентаций и кратких исследований",
+  "description": "Telegram-бот для создания презентаций и поиска потенциальных клиентов",
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
@@ -12,6 +12,7 @@
     "check": "bun run typecheck && bun test"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "grammy": "latest",
     "pptxgenjs": "latest"
   },
