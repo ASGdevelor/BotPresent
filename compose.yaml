@@ -1,0 +1,6 @@
+services:
+  bot-present:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+
