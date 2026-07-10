@@ -13,6 +13,7 @@ import {
   generateLeads,
   LeadGenerationError,
 } from "./services/lead-generation";
+import { formatHistoryReport, MessageHistory } from "./services/message-history";
 import { createPresentation } from "./services/presentation";
 import type { LeadCriteria, LeadField } from "./types/lead";
 import { normalizeTopic, safeFilePart } from "./utils";
@@ -31,15 +32,41 @@ type UserSession = PresentationSession | LeadGenerationSession;
 
 const sessions = new Map<string, UserSession>();
 
+type ReplyOptions = Parameters<Context["reply"]>[1];
+
 function sessionKey(chatId: number, userId: number): string {
   return `${chatId}:${userId}`;
 }
 
-export function createBot(token: string): Bot {
+export function createBot(token: string, history = new MessageHistory()): Bot {
   const bot = new Bot(token);
 
+  const recordHistory = (
+    ctx: Context,
+    direction: "user" | "bot" | "system",
+    text: string,
+  ): void => {
+    if (!ctx.chat || !ctx.from) return;
+    try {
+      history.record(ctx.chat.id, ctx.from.id, direction, text);
+    } catch (error) {
+      console.error("Message history write failed", error);
+    }
+  };
+
+  const reply = async (ctx: Context, text: string, options?: ReplyOptions) => {
+    const message = await ctx.reply(text, options);
+    recordHistory(ctx, "bot", text);
+    return message;
+  };
+
+  bot.use(async (ctx, next) => {
+    if (ctx.message?.text) recordHistory(ctx, "user", ctx.message.text);
+    await next();
+  });
+
   const showMenu = async (ctx: Context) => {
-    await ctx.reply(MENU_TEXT, { reply_markup: createMainKeyboard() });
+    await reply(ctx, MENU_TEXT, { reply_markup: createMainKeyboard() });
   };
 
   bot.command("start", async (ctx) => {
@@ -51,13 +78,44 @@ export function createBot(token: string): Bot {
 
   bot.command("cancel", async (ctx) => {
     if (ctx.chat && ctx.from) sessions.delete(sessionKey(ctx.chat.id, ctx.from.id));
-    await ctx.reply("Текущее действие отменено.", { reply_markup: createMainKeyboard() });
+    await reply(ctx, "Текущее действие отменено.", { reply_markup: createMainKeyboard() });
+  });
+
+  bot.command("history", async (ctx) => {
+    if (!ctx.from) return;
+    if (ctx.chat.type !== "private") {
+      await reply(ctx, "Историю можно выгрузить только в личном чате с ботом.");
+      return;
+    }
+
+    try {
+      const report = formatHistoryReport(history.list(ctx.chat.id, ctx.from.id, 100));
+      await ctx.replyWithDocument(new InputFile(Buffer.from(report, "utf8"), "bot-history.md"), {
+        caption: "Последние сообщения в этом чате. Для удаления используйте /clear_history.",
+      });
+      recordHistory(ctx, "bot", "[Документ: bot-history.md]");
+    } catch (error) {
+      console.error("Message history export failed", error);
+      await reply(ctx, "Не удалось выгрузить историю. Попробуйте позже.");
+    }
+  });
+
+  bot.command("clear_history", async (ctx) => {
+    if (!ctx.from) return;
+    try {
+      history.clear(ctx.chat.id, ctx.from.id);
+      // Подтверждение намеренно не записывается: после очистки история должна остаться пустой.
+      await ctx.reply("История сообщений удалена.", { reply_markup: createMainKeyboard() });
+    } catch (error) {
+      console.error("Message history clear failed", error);
+      await reply(ctx, "Не удалось удалить историю. Попробуйте позже.");
+    }
   });
 
   bot.hears(BUTTONS.presentation, async (ctx) => {
     if (!ctx.from) return;
     sessions.set(sessionKey(ctx.chat.id, ctx.from.id), { kind: "presentation" });
-    await ctx.reply("Напишите тему презентации одним сообщением. Для отмены: /cancel");
+    await reply(ctx, "Напишите тему презентации одним сообщением. Для отмены: /cancel");
   });
 
   bot.hears(BUTTONS.leadGeneration, async (ctx) => {
@@ -67,7 +125,7 @@ export function createBot(token: string): Bot {
       currentField: "whoCanBuy",
       answers: {},
     });
-    await ctx.reply([
+    await reply(ctx, [
       "Запускаем поиск потенциальных клиентов.",
       "Отвечайте на пять вопросов по одному. Для отмены: /cancel",
       "",
@@ -80,19 +138,19 @@ export function createBot(token: string): Bot {
     const session = sessions.get(key);
 
     if (!session) {
-      await ctx.reply("Сначала выберите действие.", { reply_markup: createMainKeyboard() });
+      await reply(ctx, "Сначала выберите действие.", { reply_markup: createMainKeyboard() });
       return;
     }
 
     if (session.kind === "presentation") {
       const topic = normalizeTopic(ctx.message.text);
       if (topic.length < 3) {
-        await ctx.reply("Тема слишком короткая. Напишите хотя бы 3 символа.");
+        await reply(ctx, "Тема слишком короткая. Напишите хотя бы 3 символа.");
         return;
       }
 
       sessions.delete(key);
-      await ctx.reply("Готовлю презентацию…");
+      await reply(ctx, "Готовлю презентацию…");
       await ctx.api.sendChatAction(ctx.chat.id, "upload_document");
       let generatedPath: string | undefined;
 
@@ -103,9 +161,10 @@ export function createBot(token: string): Bot {
           caption: "Готово! Это базовая структура — дополните её фактами и адаптируйте под аудиторию.",
           reply_markup: createMainKeyboard(),
         });
+        recordHistory(ctx, "bot", `[Документ PowerPoint: ${file.name}]`);
       } catch (error) {
         console.error("Presentation generation failed", error);
-        await ctx.reply("Не удалось создать презентацию. Попробуйте ещё раз позже.", {
+        await reply(ctx, "Не удалось создать презентацию. Попробуйте ещё раз позже.", {
           reply_markup: createMainKeyboard(),
         });
       } finally {
@@ -119,7 +178,7 @@ export function createBot(token: string): Bot {
     const answer = normalizeLeadAnswer(ctx.message.text);
     const canSkipExclusions = field === "exclusions" && /^(?:-|нет)$/i.test(answer);
     if (answer.length < 3 && !canSkipExclusions) {
-      await ctx.reply("Ответ слишком короткий. Добавьте немного деталей или отправьте /cancel.");
+      await reply(ctx, "Ответ слишком короткий. Добавьте немного деталей или отправьте /cancel.");
       return;
     }
 
@@ -128,13 +187,13 @@ export function createBot(token: string): Bot {
     if (nextField) {
       session.currentField = nextField;
       sessions.set(key, session);
-      await ctx.reply(LEAD_PROMPTS[nextField]);
+      await reply(ctx, LEAD_PROMPTS[nextField]);
       return;
     }
 
     if (!isCompleteLeadCriteria(session.answers)) {
       sessions.delete(key);
-      await ctx.reply("Не все параметры заполнены. Запустите лидогенерацию заново.", {
+      await reply(ctx, "Не все параметры заполнены. Запустите лидогенерацию заново.", {
         reply_markup: createMainKeyboard(),
       });
       return;
@@ -142,25 +201,27 @@ export function createBot(token: string): Bot {
 
     sessions.delete(key);
     const criteria = session.answers;
-    await ctx.reply("Ищу компании и проверяю публичные Telegram-контакты. Это может занять до минуты…");
+    await reply(ctx, "Ищу компании и проверяю публичные Telegram-контакты. Это может занять до минуты…");
     await ctx.api.sendChatAction(ctx.chat.id, "upload_document");
 
     try {
       const result = await generateLeads(criteria);
       const report = formatLeadReport(result);
       const filename = `leads-${safeFilePart(criteria.whoToFind)}.md`;
+      const withContacts = result.leads.filter((lead) => lead.telegramContacts.length > 0).length;
       await ctx.replyWithDocument(new InputFile(Buffer.from(report, "utf8"), filename), {
         caption: result.leads.length > 0
-          ? `Готово! Найдено компаний с публичным Telegram-контактом: ${result.leads.length}.`
-          : "По заданным критериям публичные Telegram-контакты не найдены. Рекомендации есть в файле.",
+          ? `Готово! Компаний: ${result.leads.length}; с Telegram: ${withContacts}; без Telegram: ${result.leads.length - withContacts}.`
+          : "Подходящие сайты не найдены или недоступны. Подробности есть в файле.",
         reply_markup: createMainKeyboard(),
       });
+      recordHistory(ctx, "bot", `[Отчёт лидогенерации: ${filename}; компаний: ${result.leads.length}]`);
     } catch (error) {
       console.error("Lead generation failed", error);
       const message = error instanceof LeadGenerationError
         ? error.message
         : "Не удалось выполнить лидогенерацию. Уточните параметры или попробуйте позже.";
-      await ctx.reply(message, {
+      await reply(ctx, message, {
         reply_markup: createMainKeyboard(),
       });
     }

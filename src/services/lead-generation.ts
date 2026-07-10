@@ -1,6 +1,7 @@
 import { load, type CheerioAPI } from "cheerio";
 import type {
   CompanyLead,
+  ContactRole,
   LeadCriteria,
   LeadGenerationResult,
   TelegramContact,
@@ -24,6 +25,24 @@ const IGNORED_HOSTS = new Set([
   "facebook.com",
   "instagram.com",
 ]);
+
+const ROLE_PRIORITY: Record<ContactRole, number> = {
+  director: 0,
+  sales: 1,
+  manager: 2,
+  employee: 3,
+  unknown: 4,
+  company: 5,
+};
+
+const ROLE_LABELS: Record<ContactRole, string> = {
+  director: "директор / владелец",
+  sales: "продажи / развитие бизнеса",
+  manager: "менеджер",
+  employee: "сотрудник",
+  company: "корпоративный контакт",
+  unknown: "роль не указана",
+};
 
 export class LeadGenerationError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -103,7 +122,7 @@ function buildSearchQuery(criteria: LeadCriteria): string {
     criteria.whoToFind,
     criteria.whoCanBuy,
     criteria.whereToSearch,
-    "контакты telegram",
+    "контакты telegram директор менеджер продажи",
   ].join(" ");
 }
 
@@ -133,7 +152,28 @@ async function searchCandidateUrls(criteria: LeadCriteria): Promise<string[]> {
   return urls;
 }
 
-function telegramContactFromUrl(value: string, label?: string): TelegramContact | undefined {
+export function inferContactRole(value: string): ContactRole {
+  const text = value.toLowerCase();
+  if (/директор|генеральн|руководител|владел|собственник|основател|founder|owner|chief|\bceo\b/.test(text)) {
+    return "director";
+  }
+  if (/продаж|коммерч|развити[ея]\s+бизнес|business\s+development|bizdev|sales|account\s+executive/.test(text)) {
+    return "sales";
+  }
+  if (/менеджер|manager|аккаунт|account/.test(text)) return "manager";
+  if (/сотрудник|специалист|консультант|эксперт|employee|specialist|consultant/.test(text)) {
+    return "employee";
+  }
+  if (/компания|официальн|канал|новости|company|official|channel|команда/.test(text)) return "company";
+  return "unknown";
+}
+
+function telegramContactFromUrl(
+  value: string,
+  label?: string,
+  context = "",
+  sourceUrl?: string,
+): TelegramContact | undefined {
   try {
     const url = new URL(value, "https://example.com");
     const hostname = url.hostname.replace(/^www\./, "").toLowerCase();
@@ -142,24 +182,29 @@ function telegramContactFromUrl(value: string, label?: string): TelegramContact 
     const handle = url.pathname.split("/").filter(Boolean)[0] ?? "";
     if (!TELEGRAM_HANDLE.test(handle) || handle.toLowerCase().endsWith("bot")) return undefined;
 
+    const cleanLabel = cleanText(label ?? "", 80);
     return {
       handle: `@${handle}`,
       url: `https://t.me/${handle}`,
-      ...(label && label !== `@${handle}` ? { label: cleanText(label, 80) } : {}),
+      role: inferContactRole(`${cleanLabel} ${context}`),
+      ...(cleanLabel && cleanLabel !== `@${handle}` ? { label: cleanLabel } : {}),
+      ...(sourceUrl ? { sourceUrl } : {}),
     };
   } catch {
     return undefined;
   }
 }
 
-export function extractTelegramContacts(html: string): TelegramContact[] {
+export function extractTelegramContacts(html: string, sourceUrl?: string): TelegramContact[] {
   const $ = load(html);
   const contacts: TelegramContact[] = [];
 
   $("a[href]").each((_, element) => {
     const href = $(element).attr("href");
     if (!href) return;
-    const contact = telegramContactFromUrl(href, $(element).text());
+    const label = $(element).text();
+    const context = $(element).closest("li, p, div, address").first().text();
+    const contact = telegramContactFromUrl(href, label, cleanText(context, 240), sourceUrl);
     if (contact) contacts.push(contact);
   });
 
@@ -172,11 +217,28 @@ export function extractTelegramContacts(html: string): TelegramContact[] {
     for (const match of text.matchAll(pattern)) {
       const handle = match[1];
       if (!handle || handle.toLowerCase().endsWith("bot")) continue;
-      contacts.push({ handle: `@${handle}`, url: `https://t.me/${handle}` });
+      const index = match.index ?? 0;
+      const context = text.slice(Math.max(0, index - 120), index + match[0].length + 120);
+      contacts.push({
+        handle: `@${handle}`,
+        url: `https://t.me/${handle}`,
+        role: inferContactRole(context),
+        ...(sourceUrl ? { sourceUrl } : {}),
+      });
     }
   }
 
-  return [...new Map(contacts.map((contact) => [contact.handle.toLowerCase(), contact])).values()];
+  return mergeTelegramContacts(contacts);
+}
+
+function mergeTelegramContacts(contacts: TelegramContact[]): TelegramContact[] {
+  const unique = new Map<string, TelegramContact>();
+  for (const contact of contacts) {
+    const key = contact.handle.toLowerCase();
+    const current = unique.get(key);
+    if (!current || ROLE_PRIORITY[contact.role] < ROLE_PRIORITY[current.role]) unique.set(key, contact);
+  }
+  return [...unique.values()].sort((a, b) => ROLE_PRIORITY[a.role] - ROLE_PRIORITY[b.role]);
 }
 
 function findContactPageUrls($: CheerioAPI, baseUrl: string): string[] {
@@ -232,22 +294,19 @@ async function analyzeCompany(url: string, criteria: LeadCriteria): Promise<Comp
   const pageText = cleanText($("body").text(), 200_000);
   if (shouldExclude(pageText, criteria)) return undefined;
 
-  const contacts = extractTelegramContacts(page.html);
+  const contacts = extractTelegramContacts(page.html, page.finalUrl);
   const contactPages = findContactPageUrls($, page.finalUrl);
 
   for (const contactUrl of contactPages) {
     try {
       const contactPage = await fetchPublicHtml(contactUrl);
-      contacts.push(...extractTelegramContacts(contactPage.html));
+      contacts.push(...extractTelegramContacts(contactPage.html, contactPage.finalUrl));
     } catch {
       // Контактная страница необязательна: продолжаем с данными главной страницы.
     }
   }
 
-  const uniqueContacts = [...new Map(
-    contacts.map((contact) => [contact.handle.toLowerCase(), contact]),
-  ).values()];
-  if (uniqueContacts.length === 0) return undefined;
+  const uniqueContacts = mergeTelegramContacts(contacts);
 
   const description = cleanText(
     $("meta[name='description']").attr("content")
@@ -258,6 +317,7 @@ async function analyzeCompany(url: string, criteria: LeadCriteria): Promise<Comp
 
   return {
     companyName: companyName($, page.finalUrl),
+    siteName: new URL(page.finalUrl).hostname.replace(/^www\./, ""),
     website: page.finalUrl,
     description: description || "Описание на сайте не найдено.",
     relevance: `Компания найдена по критериям «${criteria.whoToFind}»; можно предложить: ${criteria.offer}.`,
@@ -285,6 +345,8 @@ export async function generateLeads(criteria: LeadCriteria): Promise<LeadGenerat
     warnings.push(`${hostname}: сайт не удалось проанализировать`);
   });
 
+  leads.sort((a, b) => Number(b.telegramContacts.length > 0) - Number(a.telegramContacts.length > 0));
+
   return {
     criteria,
     leads,
@@ -308,16 +370,19 @@ export function formatLeadReport(result: LeadGenerationResult): string {
   const leadSections = leads.map((lead, index) => {
     const contacts = lead.telegramContacts.map((contact) => {
       const label = contact.label ? ` — ${oneLine(contact.label)}` : "";
-      return `- ${contact.handle}${label}: ${contact.url}`;
+      const source = contact.sourceUrl ? `; источник: ${contact.sourceUrl}` : "";
+      return `  - ${ROLE_LABELS[contact.role]}: ${contact.handle}${label} — ${contact.url}${source}`;
     });
     return [
       `## ${index + 1}. ${oneLine(lead.companyName)}`,
       "",
-      `- Сайт: ${lead.website}`,
+      `- Название сайта: ${lead.siteName}`,
+      `- Адрес сайта: ${lead.website}`,
       `- Почему подходит: ${oneLine(lead.relevance)}`,
       `- Описание: ${oneLine(lead.description)}`,
-      "- Публичные Telegram-контакты:",
-      ...contacts,
+      ...(contacts.length > 0
+        ? ["- Публичные Telegram-контакты:", ...contacts]
+        : ["- Публичные Telegram-контакты: не найдены"]),
     ].join("\n");
   });
 
@@ -325,16 +390,22 @@ export function formatLeadReport(result: LeadGenerationResult): string {
     ? [
         "## Результат",
         "",
-        "Компании с публично указанным Telegram-контактом не найдены. Укажите конкретные сайты в поле «Где искать» или расширьте критерии.",
+        "Подходящие сайты не удалось проанализировать. Укажите конкретные сайты в поле «Где искать» или расширьте критерии.",
       ]
     : [];
+
+  const companiesWithContacts = leads.filter((lead) => lead.telegramContacts.length > 0).length;
+  const contactCount = leads.reduce((sum, lead) => sum + lead.telegramContacts.length, 0);
 
   return [
     "# Результаты лидогенерации",
     "",
     `Сформировано: ${createdAt}`,
     `Проанализировано сайтов: ${result.analyzedSites}`,
-    `Найдено компаний с Telegram-контактом: ${leads.length}`,
+    `Компаний в списке: ${leads.length}`,
+    `Компаний с Telegram-контактом: ${companiesWithContacts}`,
+    `Компаний без Telegram-контакта: ${leads.length - companiesWithContacts}`,
+    `Всего публичных Telegram-контактов: ${contactCount}`,
     "",
     "## Параметры поиска",
     "",
@@ -344,7 +415,7 @@ export function formatLeadReport(result: LeadGenerationResult): string {
     `- Что предлагаем: ${oneLine(criteria.offer)}`,
     `- Кого не берём: ${oneLine(criteria.exclusions)}`,
     "",
-    "> В отчёт включаются только контакты, открыто опубликованные на сайтах. Перед обращением проверьте актуальность данных и соблюдайте правила площадки и применимое законодательство.",
+    "> Роль определяется по открытому тексту рядом с контактом и может быть неточной. Перед обращением проверьте личность, полномочия и актуальность контакта, соблюдайте правила площадки и применимое законодательство.",
     "",
     ...leadSections,
     ...noLeads,

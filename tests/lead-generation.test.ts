@@ -3,6 +3,7 @@ import {
   extractExplicitUrls,
   extractTelegramContacts,
   formatLeadReport,
+  inferContactRole,
   parseSearchResults,
 } from "../src/services/lead-generation";
 import type { LeadGenerationResult } from "../src/types/lead";
@@ -38,15 +39,24 @@ describe("lead generation parsing", () => {
     `;
     expect(extractTelegramContacts(html)).toEqual([
       {
-        handle: "@sales_manager",
-        url: "https://t.me/sales_manager",
-        label: "Анна, отдел продаж",
-      },
-      {
         handle: "@business_owner",
         url: "https://t.me/business_owner",
+        role: "director",
+      },
+      {
+        handle: "@sales_manager",
+        url: "https://t.me/sales_manager",
+        role: "sales",
+        label: "Анна, отдел продаж",
       },
     ]);
+  });
+
+  test("classifies decision-maker roles from public context", () => {
+    expect(inferContactRole("Иван — генеральный директор")).toBe("director");
+    expect(inferContactRole("Анна, менеджер отдела продаж")).toBe("sales");
+    expect(inferContactRole("Официальный канал компании")).toBe("company");
+    expect(inferContactRole("Связаться в Telegram")).toBe("unknown");
   });
 
   test("formats a report with company and contact", () => {
@@ -62,10 +72,16 @@ describe("lead generation parsing", () => {
       warnings: [],
       leads: [{
         companyName: "Acme",
+        siteName: "acme.example",
         website: "https://acme.example/",
         description: "CRM-интегратор",
         relevance: "Подходит по отрасли",
-        telegramContacts: [{ handle: "@acme_sales", url: "https://t.me/acme_sales" }],
+        telegramContacts: [{
+          handle: "@acme_sales",
+          url: "https://t.me/acme_sales",
+          role: "sales",
+          sourceUrl: "https://acme.example/contacts",
+        }],
       }],
     };
 
@@ -73,5 +89,34 @@ describe("lead generation parsing", () => {
     expect(report).toContain("## 1. Acme");
     expect(report).toContain("@acme_sales");
     expect(report).toContain("Проанализировано сайтов: 3");
+    expect(report).toContain("продажи / развитие бизнеса");
+    expect(report).toContain("источник: https://acme.example/contacts");
+  });
+
+  test("includes a company even when Telegram contacts are absent", () => {
+    const result: LeadGenerationResult = {
+      criteria: {
+        whoCanBuy: "компании",
+        whoToFind: "производители",
+        whereToSearch: "example.com",
+        offer: "автоматизацию",
+        exclusions: "нет",
+      },
+      analyzedSites: 1,
+      warnings: [],
+      leads: [{
+        companyName: "Factory",
+        siteName: "example.com",
+        website: "https://example.com/",
+        description: "Производитель",
+        relevance: "Подходит по отрасли",
+        telegramContacts: [],
+      }],
+    };
+
+    const report = formatLeadReport(result);
+    expect(report).toContain("Название сайта: example.com");
+    expect(report).toContain("Telegram-контакты: не найдены");
+    expect(report).toContain("Компаний без Telegram-контакта: 1");
   });
 });

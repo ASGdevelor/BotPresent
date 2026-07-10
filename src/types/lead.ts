@@ -13,14 +13,25 @@ export interface LeadCriteria {
 
 export type LeadField = keyof LeadCriteria;
 
+export type ContactRole =
+  | "director"
+  | "sales"
+  | "manager"
+  | "employee"
+  | "company"
+  | "unknown";
+
 export interface TelegramContact {
   handle: string;
   url: string;
+  role: ContactRole;
   label?: string;
+  sourceUrl?: string;
 }
 
 export interface CompanyLead {
   companyName: string;
+  siteName: string;
   website: string;
   description: string;
   relevance: string;
@@ -33,4 +44,3 @@ export interface LeadGenerationResult {
   analyzedSites: number;
   warnings: string[];
 }
-
