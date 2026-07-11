@@ -3,6 +3,7 @@ export const BUTTONS = {
   createPresentation: "➕ Создать презентацию",
   editPresentation: "✏️ Изменить презентацию",
   myPresentations: "📁 Мои презентации",
+  presentationsFromLeads: "🗂 Презентации для всех лидов",
   back: "◀️ Назад",
   leadGeneration: "🎯 Лидогенерация",
 } as const;

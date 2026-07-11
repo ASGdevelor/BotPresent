@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
   isCompleteLeadCriteria,
+  LEAD_PROMPTS,
   nextLeadField,
   normalizeLeadAnswer,
 } from "../src/lead-form";
 
 describe("lead form", () => {
+  test("shows examples for precise lead search", () => {
+    expect(LEAD_PROMPTS.whoToFind).toContain("Пример:");
+    expect(LEAD_PROMPTS.whereToSearch).toContain("Москва");
+  });
   test("moves through all five fields", () => {
     expect(nextLeadField("whoCanBuy")).toBe("whoToFind");
     expect(nextLeadField("whoToFind")).toBe("whereToSearch");
@@ -30,4 +35,3 @@ describe("lead form", () => {
     })).toBeTrue();
   });
 });
-

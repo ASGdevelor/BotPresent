@@ -1,6 +1,6 @@
 import { Bot, GrammyError, HttpError, InputFile, type Context } from "grammy";
 import { BUTTONS, MENU_TEXT } from "./constants";
-import { createMainKeyboard, createPresentationKeyboard } from "./keyboard";
+import { createLeadResultKeyboard, createMainKeyboard, createPresentationKeyboard } from "./keyboard";
 import {
   isCompleteLeadCriteria,
   LEAD_PROMPTS,
@@ -14,7 +14,7 @@ import {
 } from "./services/lead-generation";
 import { formatHistoryReport, MessageHistory } from "./services/message-history";
 import { createWebsitePresentation, listPresentations, type PresentationRecord } from "./services/presentation";
-import type { LeadCriteria, LeadField } from "./types/lead";
+import type { CompanyLead, LeadCriteria, LeadField } from "./types/lead";
 import { normalizeTopic, safeFilePart } from "./utils";
 
 interface PresentationSession {
@@ -31,6 +31,7 @@ interface LeadGenerationSession {
 type UserSession = PresentationSession | LeadGenerationSession;
 
 const sessions = new Map<string, UserSession>();
+const lastLeadResults = new Map<string, CompanyLead[]>();
 
 type ReplyOptions = Parameters<Context["reply"]>[1];
 
@@ -78,6 +79,16 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
 
   const showMenu = async (ctx: Context) => {
     await reply(ctx, MENU_TEXT, { reply_markup: createMainKeyboard() });
+  };
+
+  const updateProgress = (ctx: Context, messageId: number, prefix: string) => {
+    let lastPercent = -1;
+    return async (percent: number, stage: string) => {
+      const normalized = Math.max(0, Math.min(100, Math.round(percent)));
+      if (normalized === lastPercent) return;
+      lastPercent = normalized;
+      await ctx.api.editMessageText(ctx.chat!.id, messageId, `${prefix}: ${normalized}%\n${stage}`).catch(() => undefined);
+    };
   };
 
   bot.command("start", async (ctx) => {
@@ -167,6 +178,48 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     await reply(ctx, `${presentationListText(records)}\n\nОтправьте ID презентации. Чтобы заменить сайт, отправьте: ID адрес-сайта`);
   });
 
+  bot.hears(BUTTONS.presentationsFromLeads, async (ctx) => {
+    if (!ctx.from) return;
+    const key = sessionKey(ctx.chat.id, ctx.from.id);
+    const leads = lastLeadResults.get(key) ?? [];
+    if (leads.length === 0) {
+      await reply(ctx, "Сначала выполните лидогенерацию. После получения CSV найденные сайты будут доступны для пакетной презентации.", {
+        reply_markup: createMainKeyboard(),
+      });
+      return;
+    }
+
+    const status = await reply(ctx, `Презентации для ${leads.length} сайтов: 0%\nПодготовка`);
+    const setProgress = updateProgress(ctx, status.message_id, `Презентации для ${leads.length} сайтов`);
+    let completed = 0;
+    let failed = 0;
+    let withoutPdf = 0;
+    for (const [index, lead] of leads.entries()) {
+      try {
+        const record = await createWebsitePresentation(ctx.from.id, lead.website, undefined, async (local, stage) => {
+          const overall = ((index + local / 100) / leads.length) * 100;
+          await setProgress(overall, `${index + 1}/${leads.length}: ${lead.companyName} — ${stage}`);
+        }, { leadRelevance: lead.relevance });
+        await ctx.replyWithDocument(new InputFile(record.htmlPath, `${safeFilePart(record.companyName)}-index.html`), {
+          caption: `${index + 1}/${leads.length} · ${record.companyName} · HTML`,
+        });
+        if (record.pdfPath) {
+          await ctx.replyWithDocument(new InputFile(record.pdfPath, `${safeFilePart(record.companyName)}.pdf`), {
+            caption: `${record.companyName} · PDF`,
+          });
+        } else withoutPdf += 1;
+        completed += 1;
+      } catch (error) {
+        console.error(`Batch presentation failed for ${lead.website}`, error);
+        failed += 1;
+      }
+    }
+    await setProgress(100, `Готово: ${completed}; ошибок: ${failed}; без PDF: ${withoutPdf}`);
+    await reply(ctx, `Создано презентаций: ${completed}. Не создано: ${failed}. Без PDF: ${withoutPdf}.`, {
+      reply_markup: createPresentationKeyboard(),
+    });
+  });
+
   bot.hears(BUTTONS.leadGeneration, async (ctx) => {
     if (!ctx.from) return;
     sessions.set(sessionKey(ctx.chat.id, ctx.from.id), {
@@ -176,6 +229,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     });
     await reply(ctx, [
       "Запускаем поиск потенциальных клиентов.",
+      "Как проходит лидогенерация: формирую точные и расширенные запросы → нахожу официальные сайты → анализирую главную, услуги, каталоги, руководство и контакты → оцениваю совпадение → сначала показываю точные, затем частичные и похожие компании.",
       "Отвечайте на пять вопросов по одному. Для отмены: /cancel",
       "",
       LEAD_PROMPTS.whoCanBuy,
@@ -211,11 +265,12 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
         website = replacementWebsite || record.website;
       }
 
-      await reply(ctx, "Собираю реальные данные с сайта и формирую HTML/PDF…");
+      const status = await reply(ctx, "Презентация: 0%\nНачинаю обработку сайта");
+      const setProgress = updateProgress(ctx, status.message_id, "Презентация");
       await ctx.api.sendChatAction(ctx.chat.id, "upload_document");
 
       try {
-        const record = await createWebsitePresentation(ctx.from.id, website, recordId);
+        const record = await createWebsitePresentation(ctx.from.id, website, recordId, setProgress);
         sessions.delete(key);
         await ctx.replyWithDocument(new InputFile(record.htmlPath, `${safeFilePart(record.companyName)}-index.html`), {
           caption: `${record.companyName} — HTML`,
@@ -233,6 +288,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
         recordHistory(ctx, "bot", `[Презентация: ${record.id}; сайт: ${record.website}]`);
       } catch (error) {
         console.error("Presentation generation failed", error);
+        await setProgress(100, "Ошибка создания презентации");
         await reply(ctx, "Не удалось получить данные сайта или создать презентацию. Проверьте адрес и повторите.", {
           reply_markup: createPresentationKeyboard(),
         });
@@ -273,15 +329,22 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
 
     try {
       const result = await generateLeads(criteria);
+      lastLeadResults.set(key, result.leads);
       const report = formatLeadCsv(result);
       const filename = `leads-${safeFilePart(criteria.whoToFind)}.csv`;
       const withContacts = result.leads.filter((lead) => (lead.contacts?.length ?? lead.telegramContacts.length) > 0).length;
+      const exact = result.leads.filter((lead) => lead.matchKind === "exact").length;
+      const partial = result.leads.filter((lead) => lead.matchKind === "partial").length;
+      const similar = result.leads.filter((lead) => lead.matchKind === "similar").length;
       await ctx.replyWithDocument(new InputFile(Buffer.from(report, "utf8"), filename), {
         caption: result.leads.length > 0
-          ? `Компаний: ${result.leads.length}; с контактами: ${withContacts}.`
+          ? `Компаний: ${result.leads.length}; точных: ${exact}; частичных: ${partial}; похожих: ${similar}; с контактами: ${withContacts}.`
           : "Подходящие сайты не найдены или недоступны. Подробности есть в файле.",
-        reply_markup: createMainKeyboard(),
+        reply_markup: result.leads.length > 0 ? createLeadResultKeyboard() : createMainKeyboard(),
       });
+      if (exact === 0 && result.leads.length > 0) {
+        await reply(ctx, "Для более точного результата укажите: конкретную отрасль и специализацию, размер компании, город/область, 2–3 обязательных признака и явные исключения. Например: «частные стоматологии Москвы от 3 филиалов, имплантация и ортодонтия; исключить агрегаторы и одиночные кабинеты».");
+      }
       recordHistory(ctx, "bot", `[Список лидов: ${filename}; компаний: ${result.leads.length}]`);
     } catch (error) {
       console.error("Lead generation failed", error);

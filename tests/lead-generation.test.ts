@@ -2,13 +2,29 @@ import { describe, expect, test } from "bun:test";
 import {
   extractExplicitUrls,
   extractTelegramContacts,
+  formatLeadCsv,
   formatLeadReport,
   inferContactRole,
   parseSearchResults,
+  scoreCompany,
 } from "../src/services/lead-generation";
 import type { LeadGenerationResult } from "../src/types/lead";
 
 describe("lead generation parsing", () => {
+  test("ranks exact, partial and similar niche matches", () => {
+    const criteria = {
+      whoCanBuy: "сети частных стоматологий",
+      whoToFind: "стоматологические клиники имплантация ортодонтия",
+      whereToSearch: "Москва",
+      offer: "AI-видеоконтент",
+      exclusions: "нет",
+    };
+    const exact = scoreCompany("Сеть частных стоматологических клиник: имплантация и ортодонтия", criteria, true, 2);
+    const similar = scoreCompany("Медицинский информационный портал", criteria, false, 0);
+    expect(exact.score).toBeGreaterThan(similar.score);
+    expect(exact.matchKind).toBe("exact");
+    expect(similar.matchKind).toBe("similar");
+  });
   test("extracts explicit sites from the search field", () => {
     expect(extractExplicitUrls("Москва: example.com, https://acme.ru/contacts")).toEqual([
       "https://example.com/",
@@ -118,5 +134,6 @@ describe("lead generation parsing", () => {
     expect(report).toContain("Название сайта: example.com");
     expect(report).toContain("Telegram-контакты: не найдены");
     expect(report).toContain("Компаний без Telegram-контакта: 1");
+    expect(formatLeadCsv(result)).toContain("Тип совпадения,Релевантность %");
   });
 });

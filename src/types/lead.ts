@@ -21,7 +21,7 @@ export type ContactRole =
   | "company"
   | "unknown";
 
-export type ContactKind = "telegram" | "email" | "phone" | "person";
+export type ContactKind = "telegram" | "email" | "phone" | "social" | "person";
 
 export interface CompanyContact {
   kind: ContactKind;
@@ -47,6 +47,11 @@ export interface CompanyLead {
   description: string;
   relevance: string;
   region?: string;
+  /** Насколько содержимое сайта соответствует нише и региону, 0–100. */
+  relevanceScore?: number;
+  /** exact — точное, partial — частичное, similar — похожая компания. */
+  matchKind?: "exact" | "partial" | "similar";
+  matchedKeywords?: string[];
   contacts?: CompanyContact[];
   telegramContacts: TelegramContact[];
 }

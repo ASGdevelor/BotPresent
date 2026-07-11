@@ -21,3 +21,13 @@ export function createPresentationKeyboard(): Keyboard {
     .resized()
     .persistent();
 }
+
+export function createLeadResultKeyboard(): Keyboard {
+  return new Keyboard()
+    .text(BUTTONS.presentationsFromLeads)
+    .row()
+    .text(BUTTONS.presentations)
+    .text(BUTTONS.leadGeneration)
+    .resized()
+    .persistent();
+}
