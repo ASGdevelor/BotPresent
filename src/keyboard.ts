@@ -15,6 +15,7 @@ export function createPresentationKeyboard(): Keyboard {
     .text(BUTTONS.createPresentation)
     .row()
     .text(BUTTONS.editPresentation)
+    .row()
     .text(BUTTONS.myPresentations)
     .row()
     .text(BUTTONS.back)
