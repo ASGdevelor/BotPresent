@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Технический отчёт BotPresent</title>
+<style>
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.35;color:#222;margin:2cm}
+h1{font-size:20pt;color:#17365d}h2{font-size:15pt;color:#1f4e79;margin-top:20px}
+h3{font-size:12pt;color:#1f4e79}table{border-collapse:collapse;width:100%;margin:8px 0 14px}
+th,td{border:1px solid #9eacc0;padding:6px;vertical-align:top}th{background:#d9eaf7;text-align:left}
+.critical{color:#9c0006;font-weight:bold}.high{color:#c65911;font-weight:bold}.ok{color:#006100;font-weight:bold}
+code{font-family:Consolas,monospace;font-size:9pt;background:#f2f2f2;padding:1px 3px}
+</style>
+</head>
+<body>
+<h1>BotPresent — технический аудит шаблона, лидогенерации и презентаций</h1>
+<p><b>Роль проверки:</b> тимлид / code review. <b>Дата:</b> 11.07.2026. <b>Ветка:</b> docs-sync.</p>
+
+<h2>1. Итог</h2>
+<p class="critical">Статус: блокирует выпуск.</p>
+<p>По текущему состоянию проект не проходит TypeScript-проверку и имеет падающий тест лидогенерации. Основная причина некорректной презентации — выбранный рантаймом внешний шаблон <code>D:\AI\Roky\TestSite\Generic\index.html</code> не соответствует контракту рендера в <code>src/services/presentation.ts</code>. HTML-файл обычно создаётся, но остаётся частично незаполненным; PDF дополнительно зависит от наличия Edge/Chrome. Публичной web-ссылки на локально сохранённую презентацию в приложении нет: бот отправляет документы Telegram.</p>
+
+<h2>2. Проверенные источники</h2>
+<ul>
+<li><code>src/services/presentation.ts</code></li>
+<li><code>src/services/lead-generation.ts</code></li>
+<li><code>src/bot.ts</code>, <code>src/services/public-web.ts</code></li>
+<li><code>TestSite/Generic/index.html</code> в репозитории и внешний <code>../TestSite/Generic/index.html</code></li>
+<li>9 прикладных сайтов в <code>D:\AI\Roky\TestSite\*</code>: DoctorZubareva, ELEMAX, Invitro, LeafToGO, NaturalSupp, Poleznoo, UltraBalance, VitaMAX, Vitamin.</li>
+</ul>
+
+<h2>3. Соответствие шаблона сайтам TestSite</h2>
+<table><tr><th>Проверка</th><th>Результат</th><th>Оценка</th></tr>
+<tr><td>Структура прикладных index.html</td><td>У всех есть HTML5, lang=ru, viewport, title, один h1 и несколько h2. У 8 из 9 есть meta description, телефон и Telegram; email-ссылки отсутствуют.</td><td class="ok">В целом единообразно</td></tr>
+<tr><td>Репозиторный Generic</td><td>Использует компактный контракт из 10 маркеров: COMPANY, WEBSITE, DESCRIPTION, ACCENT, HEADINGS, SERVICE_CARDS, CONTACTS, SOURCES, GENERATED_AT, LEAD_RELEVANCE. Он соответствует текущему рендереру.</td><td class="ok">Совместим</td></tr>
+<tr><td>Внешний Generic, который реально выбирается</td><td>Содержит 76 уникальных маркеров. Рендерер заполняет только 10 совместимых и оставляет <b>66 уникальных маркеров</b> без замены: KPI, продукты, рынок, видео, графики, оффер, отрасль и др.</td><td class="critical">Критическое несоответствие</td></tr>
+<tr><td>Логотип</td><td>Рендерер передаёт в LOGO_URL готовый тег <code>&lt;img&gt;</code>, а внешний шаблон вставляет значение внутрь <code>src="{{LOGO_URL}}"</code>. Получается некорректный URL/сломанный img.</td><td class="high">Высокий дефект</td></tr>
+<tr><td>Цвет</td><td>В <code>accentForWebsite</code> fallback собирается как число + строка <code>hsl(%h, 68%, 42%)</code>; результат не является валидным CSS-цветом.</td><td class="high">Высокий дефект</td></tr>
+</table>
+<p><b>Причина выбора несовместимого шаблона:</b> <code>templateRoot()</code> сначала ищет <code>PRESENTATION_TEMPLATE_ROOT</code>, затем внешний путь <code>path.resolve(APP_ROOT, "..", "TestSite", "Generic")</code>, и только потом встроенный шаблон в репозитории. Поэтому наличие внешней папки переопределяет рабочий совместимый шаблон.</p>
+
+<h2>4. Почему «по ссылке» презентация не генерируется</h2>
+<ol>
+<li>Сервис не публикует локальный HTML по HTTP и не возвращает URL. <code>createWebsitePresentation</code> сохраняет файл в <code>data/presentations/&lt;userId&gt;/...</code>, а <code>src/bot.ts</code> отправляет его через <code>replyWithDocument</code>. Если ожидалась браузерная ссылка, такой функциональности нет.</li>
+<li>Если под ссылкой имеется URL сайта, обработка выполняется через <code>fetchPublicHtml</code>. Ошибка DNS/HTTP, private-IP защита, таймаут, JS-only сайт или отсутствие HTML переводят сценарий в общий ответ «не удалось получить данные сайта».</li>
+<li>Даже при успешной загрузке сайта внешний шаблон оставляет 66 маркеров. Это выглядит как «презентация не сгенерировалась», хотя файл фактически создан, но непригоден для выдачи.</li>
+<li>PDF не гарантирован: он создаётся только при обнаружении Edge/Chrome. Отсутствие браузера не отменяет HTML, но бот сообщает только о HTML.</li>
+</ol>
+
+<h2>5. Аудит lead-generation</h2>
+<table><tr><th>Область</th><th>Наблюдение</th><th>Риск</th></tr>
+<tr><td>Поиск</td><td>При явных URL поиск выдач не используется; иначе выполняются 8 запросов, чередуются Bing и DuckDuckGo, результаты нормализуются и дедуплицируются по host.</td><td class="ok">Логика понятна</td></tr>
+<tr><td>Анализ сайтов</td><td>Кандидаты обрабатываются пачками по 6, контактные страницы — по 4; ошибки отдельных сайтов собираются в warnings через Promise.allSettled.</td><td class="ok">Отказоустойчиво</td></tr>
+<tr><td>Контакты</td><td>Извлекаются email, телефоны, Telegram, поддерживаемые соцсети и имена по эвристике ролей. Telegram invite и bot handles отбрасываются.</td><td class="ok">Рабочая эвристика</td></tr>
+<tr><td>Скоринг</td><td>Словарь сопоставляется по полному вхождению слова, без стемминга/лемматизации. Тест на точное совпадение сейчас получает partial.</td><td class="critical">Блокирует качество выдачи</td></tr>
+<tr><td>Таймауты</td><td>Promise.race ограничивает ожидание, но проигравшийся fetch не отменяется через AbortController.</td><td class="high">Риск накопления запросов</td></tr>
+<tr><td>Типы/контракт</td><td>В текущем рабочем дереве отсутствует экспорт LeadGenerationError, хотя его импортируют bot.ts и используют lead-generation.ts; также есть ошибки strict typecheck.</td><td class="critical">Сборка не проходит</td></tr>
+</table>
+
+<h2>6. Объективные результаты проверок</h2>
+<pre> bun run typecheck  — FAIL
+  - LeadGenerationError не экспортируется/не объявлен
+  - src/bot.ts: error unknown в обработчике
+  - src/services/lead-generation.ts: string | undefined
+  - src/services/presentation.ts: string | undefined и undefined-индексы
+
+ bun test — 23 pass, 1 fail
+  - lead generation parsing > ranks exact, partial and similar niche matches
+  - ожидалось exact, получено partial</pre>
+<p>В рабочем дереве также есть незакоммиченные изменения в <code>src/services/lead-generation.ts</code>, <code>src/services/presentation.ts</code> и <code>AGENTS.md</code>. В аудит они включены; их нельзя затирать без отдельного решения владельца.</p>
+
+<h2>7. Приоритетный план исправлений</h2>
+<ol>
+<li><b>P0:</b> зафиксировать единый источник шаблона. Либо вернуть репозиторный Generic, либо расширить <code>values</code> до полного контракта внешнего шаблона. Добавить проверку после рендера: не должно оставаться <code>{{...}}</code>.</li>
+<li><b>P0:</b> восстановить/экспортировать <code>LeadGenerationError</code>, исправить strict typing и добиться зелёного <code>bun run check</code>.</li>
+<li><b>P0:</b> исправить scoring: стемминг/лемматизация или нормализация словоформ; закрепить exact/partial/similar тестами.</li>
+<li><b>P1:</b> разделить <code>LOGO_URL</code> и <code>LOGO_HTML</code>; исправить генерацию fallback-цвета на <code>hsl(${hue} 68% 42%)</code>.</li>
+<li><b>P1:</b> явно решить продуктовый контракт: Telegram-документ или публичная ссылка. Для ссылки нужен HTTP endpoint/статический сервер, безопасная маршрутизация и TTL/очистка файлов.</li>
+<li><b>P1:</b> добавить интеграционные тесты рендера на каждом TestSite index.html и тест на отсутствие неразрешённых маркеров.</li>
+<li><b>P2:</b> заменить Promise.race на AbortController, ограничить общий бюджет запросов и логировать причины пропуска сайтов.</li>
+</ol>
+
+<h2>8. Решение тимлида</h2>
+<p class="critical"><b>Не принимать в релиз и не считать проблему «ссылки» закрытой.</b> Сначала устранить рассинхронизацию шаблона и рендера, затем исправить сборку и scoring-тест. После этого проверить реальный Telegram-сценарий: URL сайта → HTML-документ → (при наличии браузера) PDF-документ; отдельно проверить, нужна ли публичная web-ссылка.</p>
+</body>
+</html>
