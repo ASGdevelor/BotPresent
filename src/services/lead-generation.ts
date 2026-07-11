@@ -1,6 +1,7 @@
 import { load, type CheerioAPI } from "cheerio";
 import type {
   CompanyLead,
+  CompanyContact,
   ContactRole,
   LeadCriteria,
   LeadGenerationResult,
@@ -9,10 +10,13 @@ import type {
 import { fetchPublicHtml, parsePublicHttpUrl } from "./public-web";
 
 const SEARCH_ENDPOINT = "https://www.bing.com/search";
-const MAX_CANDIDATES = 10;
-const MAX_CONTACT_PAGES = 2;
+const MAX_CANDIDATES = 30;
+const MAX_CONTACT_PAGES = 5;
 const TELEGRAM_HANDLE = /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/;
-const CONTACT_HINT = /contact|contacts|kontakt|kontakty|контакт|связаться|about|о-компании|о-нас/i;
+const CONTACT_HINT = /contact|contacts|kontakt|kontakty|контакт|связаться|about|о-компании|о-нас|team|команда|руководство|management|leadership|реквизит/i;
+const EMAIL_PATTERN = /[\w.!#$%&'*+/=?^`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)+/giu;
+const PHONE_PATTERN = /(?:\+?\d[\s().-]*){9,16}\d/g;
+const PERSON_ROLE_PATTERN = /(?:генеральн(?:ый|ого) директор|директор|руководитель|владелец|собственник|основатель|коммерческий директор|менеджер(?: по продажам)?|CEO|founder|owner|manager)/i;
 const IGNORED_HOSTS = new Set([
   "duckduckgo.com",
   "bing.com",
@@ -122,7 +126,7 @@ function buildSearchQuery(criteria: LeadCriteria): string {
     criteria.whoToFind,
     criteria.whoCanBuy,
     criteria.whereToSearch,
-    "контакты telegram директор менеджер продажи",
+    "компания официальный сайт контакты директор владелец менеджер",
   ].join(" ");
 }
 
@@ -130,20 +134,25 @@ async function searchCandidateUrls(criteria: LeadCriteria): Promise<string[]> {
   const explicitUrls = extractExplicitUrls(criteria.whereToSearch);
   if (explicitUrls.length > 0) return explicitUrls.slice(0, MAX_CANDIDATES);
 
-  const searchUrl = new URL(SEARCH_ENDPOINT);
-  searchUrl.searchParams.set("q", buildSearchQuery(criteria));
+  const queries = [
+    buildSearchQuery(criteria),
+    `${criteria.whoToFind} ${criteria.whereToSearch} каталог компаний`,
+    `${criteria.whoCanBuy} ${criteria.whereToSearch} официальный сайт`,
+  ];
 
-  let html: string;
-  try {
-    ({ html } = await fetchPublicHtml(searchUrl.toString()));
-  } catch (error) {
+  const searchPages = await Promise.allSettled(queries.map(async (query) => {
+      const searchUrl = new URL(SEARCH_ENDPOINT);
+      searchUrl.searchParams.set("q", query);
+      return (await fetchPublicHtml(searchUrl.toString())).html;
+  }));
+  const pages = searchPages.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+  if (pages.length === 0) {
     throw new LeadGenerationError(
       "Поиск недоступен. Укажите в поле «Где искать» конкретные сайты или повторите попытку позже.",
-      { cause: error },
     );
   }
 
-  const urls = parseSearchResults(html);
+  const urls = [...new Set(pages.flatMap(parseSearchResults))].slice(0, MAX_CANDIDATES);
   if (urls.length === 0) {
     throw new LeadGenerationError(
       "Поиск не вернул сайты. Уточните портрет компании или укажите конкретные домены.",
@@ -263,6 +272,76 @@ function findContactPageUrls($: CheerioAPI, baseUrl: string): string[] {
   return urls.slice(0, MAX_CONTACT_PAGES);
 }
 
+function normalizePhone(value: string): string {
+  return value.replace(/[^\d+]/g, "").replace(/^8(?=\d{10}$)/, "+7");
+}
+
+function extractCompanyContacts(html: string, sourceUrl: string): CompanyContact[] {
+  const $ = load(html);
+  const contacts: CompanyContact[] = [];
+  const add = (contact: CompanyContact) => {
+    const key = `${contact.kind}:${contact.value.toLowerCase()}`;
+    if (!contacts.some((item) => `${item.kind}:${item.value.toLowerCase()}` === key)) contacts.push(contact);
+  };
+
+  $("a[href^='mailto:']").each((_, element) => {
+    const value = ($(element).attr("href") ?? "").slice(7).split("?")[0]?.trim();
+    if (value) add({ kind: "email", value, role: inferContactRole($(element).parent().text()), sourceUrl });
+  });
+  $("a[href^='tel:']").each((_, element) => {
+    const value = normalizePhone(($(element).attr("href") ?? "").slice(4));
+    if (value.length >= 10) add({ kind: "phone", value, role: inferContactRole($(element).parent().text()), sourceUrl });
+  });
+
+  const text = cleanText($("body").text(), 200_000);
+  for (const email of text.match(EMAIL_PATTERN) ?? []) {
+    add({ kind: "email", value: email.toLowerCase(), role: inferContactRole(text.slice(Math.max(0, text.indexOf(email) - 100), text.indexOf(email) + email.length + 100)), sourceUrl });
+  }
+  for (const rawPhone of text.match(PHONE_PATTERN) ?? []) {
+    const value = normalizePhone(rawPhone);
+    if (value.length >= 10 && value.length <= 16) add({ kind: "phone", value, role: inferContactRole(text.slice(Math.max(0, text.indexOf(rawPhone) - 100), text.indexOf(rawPhone) + rawPhone.length + 100)), sourceUrl });
+  }
+
+  $("li, p, td, address, [class*='team'], [class*='person'], [class*='staff']").each((_, element) => {
+    const value = cleanText($(element).text(), 280);
+    if (!PERSON_ROLE_PATTERN.test(value)) return;
+    const name = value.match(/(?:[А-ЯЁ][а-яё-]+\s+){1,2}[А-ЯЁ][а-яё-]+|(?:[A-Z][a-z-]+\s+){1,2}[A-Z][a-z-]+/)?.[0];
+    if (name) add({ kind: "person", value: name, name, label: value, role: inferContactRole(value), sourceUrl });
+  });
+
+  for (const contact of extractTelegramContacts(html, sourceUrl)) {
+    add({ kind: "telegram", value: contact.handle, role: contact.role, label: contact.label, sourceUrl: contact.sourceUrl });
+  }
+  return contacts;
+}
+
+function regionTerms(criteria: LeadCriteria): string[] {
+  if (extractExplicitUrls(criteria.whereToSearch).length > 0) return [];
+  const stop = /^(?:искать|регион|область|город|страна|каталог|компани[ияй]|сайт(?:ы|ов)?|в|и|по)$/i;
+  return criteria.whereToSearch
+    .split(/[,;/\n]+|\s+/)
+    .map((value) => value.replace(/[^\p{L}-]/gu, "").trim())
+    .filter((value) => value.length >= 3 && !stop.test(value));
+}
+
+function detectRegion(pageText: string, criteria: LeadCriteria, website?: string): string | undefined {
+  const terms = regionTerms(criteria);
+  if (terms.length === 0) return undefined;
+  const normalizedPage = pageText.toLocaleLowerCase("ru");
+  const found = terms.filter((term) => {
+    const normalized = term.toLocaleLowerCase("ru");
+    const stem = normalized.length >= 6 ? normalized.slice(0, Math.max(5, normalized.length - 3)) : normalized;
+    if (normalizedPage.includes(normalized) || normalizedPage.includes(stem)) return true;
+    if (!website) return false;
+    const hostname = new URL(website).hostname;
+    return (/^росси|^россий/.test(normalized) && /\.(?:ru|рф)$/.test(hostname))
+      || (/^беларус/.test(normalized) && hostname.endsWith(".by"))
+      || (/^казах/.test(normalized) && hostname.endsWith(".kz"))
+      || (/^узбек/.test(normalized) && hostname.endsWith(".uz"));
+  });
+  return found.length > 0 ? found.join(", ") : undefined;
+}
+
 function exclusionPhrases(value: string): string[] {
   if (/^(?:-|нет|без исключений)$/i.test(value.trim())) return [];
   return value
@@ -293,20 +372,26 @@ async function analyzeCompany(url: string, criteria: LeadCriteria): Promise<Comp
   $("script, style, noscript, svg").remove();
   const pageText = cleanText($("body").text(), 200_000);
   if (shouldExclude(pageText, criteria)) return undefined;
+  const requestedRegions = regionTerms(criteria);
+  let region = detectRegion(pageText, criteria, page.finalUrl);
 
   const contacts = extractTelegramContacts(page.html, page.finalUrl);
+  const companyContacts = extractCompanyContacts(page.html, page.finalUrl);
   const contactPages = findContactPageUrls($, page.finalUrl);
 
   for (const contactUrl of contactPages) {
     try {
       const contactPage = await fetchPublicHtml(contactUrl);
       contacts.push(...extractTelegramContacts(contactPage.html, contactPage.finalUrl));
+      companyContacts.push(...extractCompanyContacts(contactPage.html, contactPage.finalUrl));
+      if (!region) region = detectRegion(cleanText(load(contactPage.html)("body").text(), 200_000), criteria, contactPage.finalUrl);
     } catch {
       // Контактная страница необязательна: продолжаем с данными главной страницы.
     }
   }
 
   const uniqueContacts = mergeTelegramContacts(contacts);
+  if (requestedRegions.length > 0 && !region) return undefined;
 
   const description = cleanText(
     $("meta[name='description']").attr("content")
@@ -321,6 +406,8 @@ async function analyzeCompany(url: string, criteria: LeadCriteria): Promise<Comp
     website: page.finalUrl,
     description: description || "Описание на сайте не найдено.",
     relevance: `Компания найдена по критериям «${criteria.whoToFind}»; можно предложить: ${criteria.offer}.`,
+    ...(region ? { region } : {}),
+    contacts: companyContacts.filter((contact, index, all) => all.findIndex((item) => item.kind === contact.kind && item.value.toLowerCase() === contact.value.toLowerCase()) === index),
     telegramContacts: uniqueContacts,
   };
 }
@@ -360,29 +447,28 @@ function oneLine(value: string): string {
 }
 
 export function formatLeadReport(result: LeadGenerationResult): string {
-  const { criteria, leads } = result;
-  const createdAt = new Intl.DateTimeFormat("ru-RU", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: "Europe/Moscow",
-  }).format(new Date());
-
+  const { leads } = result;
   const leadSections = leads.map((lead, index) => {
-    const contacts = lead.telegramContacts.map((contact) => {
-      const label = contact.label ? ` — ${oneLine(contact.label)}` : "";
-      const source = contact.sourceUrl ? `; источник: ${contact.sourceUrl}` : "";
-      return `  - ${ROLE_LABELS[contact.role]}: ${contact.handle}${label} — ${contact.url}${source}`;
-    });
+    const allContacts = lead.contacts ?? lead.telegramContacts.map((contact) => ({
+      kind: "telegram" as const,
+      value: contact.handle,
+      role: contact.role,
+      label: contact.label,
+      sourceUrl: contact.sourceUrl,
+    }));
+    const people = allContacts.filter((contact) => contact.kind === "person")
+      .map((contact) => `${contact.value} (${ROLE_LABELS[contact.role]})`);
+    const contacts = allContacts.filter((contact) => contact.kind !== "person")
+      .map((contact) => `${contact.value}${contact.role !== "unknown" ? ` (${ROLE_LABELS[contact.role]})` : ""}${contact.sourceUrl ? `; источник: ${contact.sourceUrl}` : ""}`);
     return [
       `## ${index + 1}. ${oneLine(lead.companyName)}`,
-      "",
+      `- Название компании: ${oneLine(lead.companyName)}`,
       `- Название сайта: ${lead.siteName}`,
-      `- Адрес сайта: ${lead.website}`,
-      `- Почему подходит: ${oneLine(lead.relevance)}`,
-      `- Описание: ${oneLine(lead.description)}`,
-      ...(contacts.length > 0
-        ? ["- Публичные Telegram-контакты:", ...contacts]
-        : ["- Публичные Telegram-контакты: не найдены"]),
+      `- Сайт: ${lead.website}`,
+      `- Регион: ${lead.region ?? "подтверждён на сайте не был"}`,
+      `- Управляющие люди / владельцы / менеджеры: ${people.join("; ") || "не найдены"}`,
+      `- Контакты: ${contacts.join("; ") || "не найдены"}`,
+      `- Публичные Telegram-контакты: ${lead.telegramContacts.length > 0 ? lead.telegramContacts.map((contact) => contact.handle).join("; ") : "не найдены"}`,
     ].join("\n");
   });
 
@@ -394,36 +480,28 @@ export function formatLeadReport(result: LeadGenerationResult): string {
       ]
     : [];
 
-  const companiesWithContacts = leads.filter((lead) => lead.telegramContacts.length > 0).length;
-  const contactCount = leads.reduce((sum, lead) => sum + lead.telegramContacts.length, 0);
-
   return [
-    "# Результаты лидогенерации",
-    "",
-    `Сформировано: ${createdAt}`,
     `Проанализировано сайтов: ${result.analyzedSites}`,
-    `Компаний в списке: ${leads.length}`,
-    `Компаний с Telegram-контактом: ${companiesWithContacts}`,
-    `Компаний без Telegram-контакта: ${leads.length - companiesWithContacts}`,
-    `Всего публичных Telegram-контактов: ${contactCount}`,
-    "",
-    "## Параметры поиска",
-    "",
-    `- Кому можно продать: ${oneLine(criteria.whoCanBuy)}`,
-    `- Кого ищем: ${oneLine(criteria.whoToFind)}`,
-    `- Где ищем: ${oneLine(criteria.whereToSearch)}`,
-    `- Что предлагаем: ${oneLine(criteria.offer)}`,
-    `- Кого не берём: ${oneLine(criteria.exclusions)}`,
-    "",
-    "> Роль определяется по открытому тексту рядом с контактом и может быть неточной. Перед обращением проверьте личность, полномочия и актуальность контакта, соблюдайте правила площадки и применимое законодательство.",
-    "",
+    `Компаний без Telegram-контакта: ${leads.filter((lead) => lead.telegramContacts.length === 0).length}`,
     ...leadSections,
     ...noLeads,
-    ...(result.warnings.length > 0 ? [
-      "",
-      "## Предупреждения",
-      "",
-      ...result.warnings.map((warning) => `- ${warning}`),
-    ] : []),
   ].join("\n");
+}
+
+function csvCell(value: string): string {
+  return `"${oneLine(value).replaceAll('"', '""')}"`;
+}
+
+export function formatLeadCsv(result: LeadGenerationResult): string {
+  const rows = result.leads.map((lead) => {
+    const contacts = lead.contacts ?? [];
+    const people = contacts.filter((contact) => contact.kind === "person")
+      .map((contact) => `${contact.value} — ${ROLE_LABELS[contact.role]}`);
+    const communication = contacts.filter((contact) => contact.kind !== "person")
+      .map((contact) => `${contact.value}${contact.role !== "unknown" ? ` — ${ROLE_LABELS[contact.role]}` : ""}`);
+    if (contacts.length === 0) communication.push(...lead.telegramContacts.map((contact) => contact.handle));
+    return [lead.companyName, lead.website, lead.region ?? "", people.join("; "), communication.join("; ")]
+      .map(csvCell).join(",");
+  });
+  return `\uFEFF${["Название компании,Сайт,Регион,Управляющие люди владельцы менеджеры,Контакты", ...rows].join("\r\n")}`;
 }

@@ -1,5 +1,9 @@
 export const BUTTONS = {
-  presentation: "📊 Создать презентацию",
+  presentations: "📊 Презентации",
+  createPresentation: "➕ Создать презентацию",
+  editPresentation: "✏️ Изменить презентацию",
+  myPresentations: "📁 Мои презентации",
+  back: "◀️ Назад",
   leadGeneration: "🎯 Лидогенерация",
 } as const;
 

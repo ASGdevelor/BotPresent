@@ -1,7 +1,6 @@
-import { unlink } from "node:fs/promises";
 import { Bot, GrammyError, HttpError, InputFile, type Context } from "grammy";
 import { BUTTONS, MENU_TEXT } from "./constants";
-import { createMainKeyboard } from "./keyboard";
+import { createMainKeyboard, createPresentationKeyboard } from "./keyboard";
 import {
   isCompleteLeadCriteria,
   LEAD_PROMPTS,
@@ -9,17 +8,18 @@ import {
   normalizeLeadAnswer,
 } from "./lead-form";
 import {
-  formatLeadReport,
+  formatLeadCsv,
   generateLeads,
   LeadGenerationError,
 } from "./services/lead-generation";
 import { formatHistoryReport, MessageHistory } from "./services/message-history";
-import { createPresentation } from "./services/presentation";
+import { createWebsitePresentation, listPresentations, type PresentationRecord } from "./services/presentation";
 import type { LeadCriteria, LeadField } from "./types/lead";
 import { normalizeTopic, safeFilePart } from "./utils";
 
 interface PresentationSession {
   kind: "presentation";
+  action: "create" | "edit";
 }
 
 interface LeadGenerationSession {
@@ -59,6 +59,17 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     recordHistory(ctx, "bot", text);
     return message;
   };
+
+  bot.use(async (ctx, next) => {
+    try {
+      await next();
+    } catch (error) {
+      console.error("Update handling failed", error);
+      await reply(ctx, "Не удалось обработать сообщение. Попробуйте ещё раз или откройте /menu.", {
+        reply_markup: createMainKeyboard(),
+      }).catch(() => undefined);
+    }
+  });
 
   bot.use(async (ctx, next) => {
     if (ctx.message?.text) recordHistory(ctx, "user", ctx.message.text);
@@ -112,10 +123,48 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     }
   });
 
-  bot.hears(BUTTONS.presentation, async (ctx) => {
+  bot.hears(BUTTONS.presentations, async (ctx) => {
     if (!ctx.from) return;
-    sessions.set(sessionKey(ctx.chat.id, ctx.from.id), { kind: "presentation" });
-    await reply(ctx, "Напишите тему презентации одним сообщением. Для отмены: /cancel");
+    sessions.delete(sessionKey(ctx.chat.id, ctx.from.id));
+    await reply(ctx, "Выберите действие с презентациями.", { reply_markup: createPresentationKeyboard() });
+  });
+
+  bot.hears(BUTTONS.back, async (ctx) => {
+    if (ctx.from) sessions.delete(sessionKey(ctx.chat.id, ctx.from.id));
+    await showMenu(ctx);
+  });
+
+  bot.hears(BUTTONS.createPresentation, async (ctx) => {
+    if (!ctx.from) return;
+    sessions.set(sessionKey(ctx.chat.id, ctx.from.id), { kind: "presentation", action: "create" });
+    await reply(ctx, "Отправьте адрес сайта компании. Я соберу факты с сайта и создам index.html и PDF. Для отмены: /cancel");
+  });
+
+  const presentationListText = (records: PresentationRecord[]) => records.length === 0
+    ? "У вас пока нет презентаций."
+    : records.map((record) => `${record.id} — ${record.companyName} — ${record.website}`).join("\n");
+
+  bot.hears(BUTTONS.myPresentations, async (ctx) => {
+    if (!ctx.from) return;
+    const records = await listPresentations(ctx.from.id);
+    await reply(ctx, presentationListText(records), { reply_markup: createPresentationKeyboard() });
+    for (const record of records.slice(0, 10)) {
+      await ctx.replyWithDocument(new InputFile(record.htmlPath, `${safeFilePart(record.companyName)}-index.html`), {
+        caption: record.companyName,
+      });
+      if (record.pdfPath) await ctx.replyWithDocument(new InputFile(record.pdfPath, `${safeFilePart(record.companyName)}.pdf`));
+    }
+  });
+
+  bot.hears(BUTTONS.editPresentation, async (ctx) => {
+    if (!ctx.from) return;
+    const records = await listPresentations(ctx.from.id);
+    if (records.length === 0) {
+      await reply(ctx, "У вас пока нет презентаций.", { reply_markup: createPresentationKeyboard() });
+      return;
+    }
+    sessions.set(sessionKey(ctx.chat.id, ctx.from.id), { kind: "presentation", action: "edit" });
+    await reply(ctx, `${presentationListText(records)}\n\nОтправьте ID презентации. Чтобы заменить сайт, отправьте: ID адрес-сайта`);
   });
 
   bot.hears(BUTTONS.leadGeneration, async (ctx) => {
@@ -143,32 +192,50 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     }
 
     if (session.kind === "presentation") {
-      const topic = normalizeTopic(ctx.message.text);
-      if (topic.length < 3) {
-        await reply(ctx, "Тема слишком короткая. Напишите хотя бы 3 символа.");
+      const input = normalizeTopic(ctx.message.text);
+      if (input.length < 3) {
+        await reply(ctx, "Адрес или ID слишком короткий.");
         return;
       }
+      let website = input;
+      let recordId: string | undefined;
+      if (session.action === "edit") {
+        const [id, replacementWebsite] = input.split(/\s+/, 2);
+        const records = await listPresentations(ctx.from.id);
+        const record = records.find((item) => item.id === id);
+        if (!record) {
+          await reply(ctx, "Презентация с таким ID не найдена. Проверьте ID и отправьте ещё раз.");
+          return;
+        }
+        recordId = record.id;
+        website = replacementWebsite || record.website;
+      }
 
-      sessions.delete(key);
-      await reply(ctx, "Готовлю презентацию…");
+      await reply(ctx, "Собираю реальные данные с сайта и формирую HTML/PDF…");
       await ctx.api.sendChatAction(ctx.chat.id, "upload_document");
-      let generatedPath: string | undefined;
 
       try {
-        const file = await createPresentation(topic);
-        generatedPath = file.path;
-        await ctx.replyWithDocument(new InputFile(file.path, file.name), {
-          caption: "Готово! Это базовая структура — дополните её фактами и адаптируйте под аудиторию.",
-          reply_markup: createMainKeyboard(),
+        const record = await createWebsitePresentation(ctx.from.id, website, recordId);
+        sessions.delete(key);
+        await ctx.replyWithDocument(new InputFile(record.htmlPath, `${safeFilePart(record.companyName)}-index.html`), {
+          caption: `${record.companyName} — HTML`,
+          reply_markup: createPresentationKeyboard(),
         });
-        recordHistory(ctx, "bot", `[Документ PowerPoint: ${file.name}]`);
+        if (record.pdfPath) {
+          await ctx.replyWithDocument(new InputFile(record.pdfPath, `${safeFilePart(record.companyName)}.pdf`), {
+            caption: `${record.companyName} — PDF`,
+          });
+        } else {
+          await reply(ctx, "HTML готов. PDF не создан: для локальной печати PDF нужен Microsoft Edge или Chrome.", {
+            reply_markup: createPresentationKeyboard(),
+          });
+        }
+        recordHistory(ctx, "bot", `[Презентация: ${record.id}; сайт: ${record.website}]`);
       } catch (error) {
         console.error("Presentation generation failed", error);
-        await reply(ctx, "Не удалось создать презентацию. Попробуйте ещё раз позже.", {
-          reply_markup: createMainKeyboard(),
+        await reply(ctx, "Не удалось получить данные сайта или создать презентацию. Проверьте адрес и повторите.", {
+          reply_markup: createPresentationKeyboard(),
         });
-      } finally {
-        if (generatedPath) await unlink(generatedPath).catch(() => undefined);
       }
 
       return;
@@ -206,16 +273,16 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
 
     try {
       const result = await generateLeads(criteria);
-      const report = formatLeadReport(result);
-      const filename = `leads-${safeFilePart(criteria.whoToFind)}.md`;
-      const withContacts = result.leads.filter((lead) => lead.telegramContacts.length > 0).length;
+      const report = formatLeadCsv(result);
+      const filename = `leads-${safeFilePart(criteria.whoToFind)}.csv`;
+      const withContacts = result.leads.filter((lead) => (lead.contacts?.length ?? lead.telegramContacts.length) > 0).length;
       await ctx.replyWithDocument(new InputFile(Buffer.from(report, "utf8"), filename), {
         caption: result.leads.length > 0
-          ? `Готово! Компаний: ${result.leads.length}; с Telegram: ${withContacts}; без Telegram: ${result.leads.length - withContacts}.`
+          ? `Компаний: ${result.leads.length}; с контактами: ${withContacts}.`
           : "Подходящие сайты не найдены или недоступны. Подробности есть в файле.",
         reply_markup: createMainKeyboard(),
       });
-      recordHistory(ctx, "bot", `[Отчёт лидогенерации: ${filename}; компаний: ${result.leads.length}]`);
+      recordHistory(ctx, "bot", `[Список лидов: ${filename}; компаний: ${result.leads.length}]`);
     } catch (error) {
       console.error("Lead generation failed", error);
       const message = error instanceof LeadGenerationError

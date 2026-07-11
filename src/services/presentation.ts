@@ -1,176 +1,221 @@
-import { mkdir } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { access, cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import path from "node:path";
-import pptxgen from "pptxgenjs";
+import { load } from "cheerio";
+import { fetchPublicHtml, parsePublicHttpUrl } from "./public-web";
 import { safeFilePart } from "../utils";
-
-const NAVY = "132238";
-const BLUE = "2563EB";
-const CYAN = "38BDF8";
-const LIGHT = "F8FAFC";
-const SLATE = "475569";
-
-interface SlideContent {
-  title: string;
-  points: string[];
-}
 
 export interface PresentationFile {
   path: string;
   name: string;
 }
 
-function addHeader(slide: pptxgen.Slide, title: string, number: number): void {
-  slide.background = { color: LIGHT };
-  slide.addShape("rect", { x: 0, y: 0, w: 0.16, h: 7.5, fill: { color: BLUE }, line: { color: BLUE } });
-  slide.addText(title, {
-    x: 0.72,
-    y: 0.62,
-    w: 11.7,
-    h: 0.6,
-    fontFace: "Aptos Display",
-    fontSize: 28,
-    bold: true,
-    color: NAVY,
-    margin: 0,
-  });
-  slide.addText(String(number).padStart(2, "0"), {
-    x: 11.85,
-    y: 6.9,
-    w: 0.7,
-    h: 0.3,
-    fontSize: 10,
-    color: SLATE,
-    align: "right",
-    margin: 0,
-  });
+export interface PresentationRecord {
+  id: string;
+  userId: number;
+  companyName: string;
+  website: string;
+  createdAt: string;
+  updatedAt: string;
+  htmlPath: string;
+  pdfPath?: string;
 }
 
-function addContentSlide(pptx: pptxgen, content: SlideContent, number: number): void {
-  const slide = pptx.addSlide();
-  addHeader(slide, content.title, number);
-
-  content.points.forEach((point, index) => {
-    const y = 1.65 + index * 1.15;
-    slide.addShape("ellipse", {
-      x: 0.8,
-      y: y + 0.04,
-      w: 0.34,
-      h: 0.34,
-      fill: { color: index === 0 ? CYAN : BLUE },
-      line: { color: index === 0 ? CYAN : BLUE },
-    });
-    slide.addText(point, {
-      x: 1.4,
-      y,
-      w: 10.8,
-      h: 0.7,
-      fontFace: "Aptos",
-      fontSize: 21,
-      color: NAVY,
-      breakLine: false,
-      margin: 0,
-      valign: "middle",
-    });
-  });
+interface WebsiteFacts {
+  companyName: string;
+  website: string;
+  description: string;
+  headings: string[];
+  services: string[];
+  contacts: string[];
+  sources: string[];
 }
 
-export async function createPresentation(topic: string): Promise<PresentationFile> {
-  const pptx = new pptxgen();
-  pptx.layout = "LAYOUT_WIDE";
-  pptx.author = "BotPresent";
-  pptx.subject = topic;
-  pptx.title = topic;
-  pptx.company = "BotPresent";
-  pptx.theme = {
-    headFontFace: "Aptos Display",
-    bodyFontFace: "Aptos",
-  };
+const APP_ROOT = path.resolve(import.meta.dir, "..", "..");
+const PRESENTATIONS_ROOT = path.join(APP_ROOT, "data", "presentations");
+const TEMPLATE_ROOT = path.join(APP_ROOT, "TestSite", "Generic");
 
-  const titleSlide = pptx.addSlide();
-  titleSlide.background = { color: NAVY };
-  titleSlide.addShape("rect", {
-    x: 0,
-    y: 0,
-    w: 13.333,
-    h: 0.16,
-    fill: { color: CYAN },
-    line: { color: CYAN },
-  });
-  titleSlide.addText(topic, {
-    x: 0.85,
-    y: 2.1,
-    w: 11.65,
-    h: 1.65,
-    fontFace: "Aptos Display",
-    fontSize: 32,
-    bold: true,
-    color: "FFFFFF",
-    margin: 0,
-    valign: "middle",
-    fit: "shrink",
-  });
-  titleSlide.addText("Краткая презентация · создано BotPresent", {
-    x: 0.88,
-    y: 4.2,
-    w: 8,
-    h: 0.35,
-    fontFace: "Aptos",
-    fontSize: 14,
-    color: "CBD5E1",
-    margin: 0,
-  });
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[char] ?? char);
+}
 
-  const slides: SlideContent[] = [
-    {
-      title: "Контекст и актуальность",
-      points: [
-        `Что важно знать о теме «${topic}»`,
-        "Почему тема заслуживает внимания сейчас",
-        "Для кого особенно важны результаты",
-      ],
-    },
-    {
-      title: "Ключевые аспекты",
-      points: [
-        "Основные понятия и участники",
-        "Факторы, которые влияют на результат",
-        "Связи между причиной, действием и эффектом",
-      ],
-    },
-    {
-      title: "Возможности и ограничения",
-      points: [
-        "Практическая ценность и ожидаемые преимущества",
-        "Риски, ограничения и спорные вопросы",
-        "Условия успешного применения",
-      ],
-    },
-    {
-      title: "План действий",
-      points: [
-        "Определить цель и критерии успеха",
-        "Собрать данные и проверить гипотезы",
-        "Запустить пилот и оценить результат",
-      ],
-    },
-    {
-      title: "Выводы",
-      points: [
-        `Тема «${topic}» требует предметной проверки`,
-        "Решения стоит принимать на основе данных",
-        "Следующий шаг — адаптировать структуру под аудиторию",
-      ],
-    },
+function clean(value: string, max = 500): string {
+  return value.replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function normalizeWebsite(value: string): string {
+  const candidate = /^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`;
+  return parsePublicHttpUrl(candidate).toString();
+}
+
+function dedupe(values: string[], limit: number): string[] {
+  return [...new Set(values.map((value) => clean(value)).filter((value) => value.length >= 3))].slice(0, limit);
+}
+
+async function collectWebsiteFacts(input: string): Promise<WebsiteFacts> {
+  const website = normalizeWebsite(input);
+  const home = await fetchPublicHtml(website);
+  const $ = load(home.html);
+  $("script, style, noscript, svg").remove();
+  const companyName = clean(
+    $("meta[property='og:site_name']").attr("content")
+      ?? $("meta[name='application-name']").attr("content")
+      ?? $("h1").first().text()
+      ?? $("title").text().split(/[|—–-]/)[0],
+    120,
+  ) || new URL(home.finalUrl).hostname.replace(/^www\./, "");
+  const description = clean(
+    $("meta[name='description']").attr("content")
+      ?? $("meta[property='og:description']").attr("content")
+      ?? $("main").first().text()
+      ?? $("body").text(),
+    900,
+  );
+  const headings = $("h1,h2,h3").map((_, node) => $(node).text()).get();
+  const services = $("main li, section li, [class*='service'], [class*='product']").map((_, node) => $(node).text()).get();
+  const contacts = [
+    ...$("a[href^='mailto:']").map((_, node) => ($(node).attr("href") ?? "").replace(/^mailto:/, "").split("?")[0] ?? "").get(),
+    ...$("a[href^='tel:']").map((_, node) => clean($(node).text()) || ($(node).attr("href") ?? "").replace(/^tel:/, "")).get(),
+    ...$("a[href*='t.me/']").map((_, node) => $(node).attr("href") ?? "").get(),
   ];
+  const relatedUrls = dedupe($("a[href]").map((_, node) => {
+    const href = $(node).attr("href");
+    const hint = `${href ?? ""} ${$(node).text()}`;
+    if (!href || !/about|company|contact|team|management|о нас|о компании|контакт|команда|руковод/i.test(hint)) return "";
+    try {
+      const url = new URL(href, home.finalUrl);
+      return url.hostname === new URL(home.finalUrl).hostname ? url.toString() : "";
+    } catch { return ""; }
+  }).get(), 4);
+  const sources = [home.finalUrl];
+  const relatedPages = await Promise.allSettled(relatedUrls.map((url) => fetchPublicHtml(url)));
+  for (const result of relatedPages) {
+    if (result.status !== "fulfilled") continue;
+    const related = load(result.value.html);
+    headings.push(...related("h1,h2,h3").map((_, node) => related(node).text()).get());
+    services.push(...related("main li, section li, [class*='service'], [class*='product']").map((_, node) => related(node).text()).get());
+    contacts.push(
+      ...related("a[href^='mailto:']").map((_, node) => (related(node).attr("href") ?? "").replace(/^mailto:/, "").split("?")[0] ?? "").get(),
+      ...related("a[href^='tel:']").map((_, node) => clean(related(node).text()) || (related(node).attr("href") ?? "").replace(/^tel:/, "")).get(),
+      ...related("a[href*='t.me/']").map((_, node) => related(node).attr("href") ?? "").get(),
+    );
+    sources.push(result.value.finalUrl);
+  }
 
-  slides.forEach((slide, index) => addContentSlide(pptx, slide, index + 2));
+  return {
+    companyName,
+    website: home.finalUrl,
+    description: description || "Описание на официальном сайте не найдено.",
+    headings: dedupe(headings, 12),
+    services: dedupe(services, 10),
+    contacts: dedupe(contacts, 12),
+    sources: dedupe(sources, 5),
+  };
+}
 
-  const outputDir = path.join(process.cwd(), "tmp");
-  await mkdir(outputDir, { recursive: true });
-  const fileName = `${safeFilePart(topic)}-${randomUUID().slice(0, 8)}.pptx`;
-  const filePath = path.join(outputDir, fileName);
-  await pptx.writeFile({ fileName: filePath, compression: true });
+function accentForWebsite(website: string): string {
+  const digest = createHash("sha256").update(new URL(website).hostname).digest();
+  const hue = ((digest[0]! << 8) | digest[1]!) % 360;
+  return `hsl(${hue} 68% 42%)`;
+}
 
-  return { path: filePath, name: `${safeFilePart(topic)}.pptx` };
+function listHtml(items: string[], fallback: string): string {
+  const values = items.length > 0 ? items : [fallback];
+  return values.map((item) => `<li>${escapeHtml(item)}</li>`).join("\n");
+}
+
+async function renderHtml(facts: WebsiteFacts, targetDir: string): Promise<string> {
+  const templatePath = path.join(TEMPLATE_ROOT, "index.html");
+  const template = await readFile(templatePath, "utf8");
+  const values: Record<string, string> = {
+    COMPANY: escapeHtml(facts.companyName),
+    WEBSITE: escapeHtml(facts.website),
+    DESCRIPTION: escapeHtml(facts.description),
+    ACCENT: accentForWebsite(facts.website),
+    HEADINGS: listHtml(facts.headings, "Основные направления на сайте не выделены"),
+    SERVICES: listHtml(facts.services, "Перечень услуг на главной странице не найден"),
+    CONTACTS: listHtml(facts.contacts, "Публичные контакты на главной странице не найдены"),
+    SOURCES: listHtml(facts.sources, facts.website),
+    GENERATED_AT: new Intl.DateTimeFormat("ru-RU", { dateStyle: "long", timeZone: "Europe/Moscow" }).format(new Date()),
+  };
+  const html = Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{{${key}}}`, value), template);
+  const htmlPath = path.join(targetDir, "index.html");
+  await writeFile(htmlPath, html, "utf8");
+  return htmlPath;
+}
+
+async function existingBrowser(): Promise<string | undefined> {
+  const candidates = [
+    process.env.EDGE_PATH,
+    "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser",
+  ].filter((value): value is string => Boolean(value));
+  for (const candidate of candidates) {
+    try { await access(candidate); return candidate; } catch { /* пробуем следующий браузер */ }
+  }
+  return undefined;
+}
+
+async function renderPdf(htmlPath: string, pdfPath: string): Promise<boolean> {
+  const browser = await existingBrowser();
+  if (!browser) return false;
+  return await new Promise((resolve) => {
+    const child = spawn(browser, [
+      "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
+      `--print-to-pdf=${pdfPath}`, new URL(`file:///${htmlPath.replace(/\\/g, "/")}`).toString(),
+    ], { stdio: "ignore", windowsHide: true });
+    const timer = setTimeout(() => { child.kill(); resolve(false); }, 45_000);
+    child.once("error", () => { clearTimeout(timer); resolve(false); });
+    child.once("exit", async (code) => {
+      clearTimeout(timer);
+      if (code !== 0) return resolve(false);
+      try { await access(pdfPath); resolve(true); } catch { resolve(false); }
+    });
+  });
+}
+
+function userRoot(userId: number): string {
+  return path.join(PRESENTATIONS_ROOT, String(userId));
+}
+
+export async function listPresentations(userId: number): Promise<PresentationRecord[]> {
+  const root = userRoot(userId);
+  let entries;
+  try { entries = await readdir(root, { withFileTypes: true }); } catch { return []; }
+  const records = await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
+    try { return JSON.parse(await readFile(path.join(root, entry.name, "presentation.json"), "utf8")) as PresentationRecord; }
+    catch { return undefined; }
+  }));
+  return records.filter((record): record is PresentationRecord => Boolean(record)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function createWebsitePresentation(userId: number, website: string, recordId?: string): Promise<PresentationRecord> {
+  const existing = recordId ? (await listPresentations(userId)).find((record) => record.id === recordId) : undefined;
+  const facts = await collectWebsiteFacts(website || existing?.website || "");
+  const id = existing?.id ?? `${safeFilePart(new URL(facts.website).hostname)}-${randomUUID().slice(0, 8)}`;
+  const targetDir = path.join(userRoot(userId), id);
+  await mkdir(targetDir, { recursive: true });
+  await cp(TEMPLATE_ROOT, targetDir, { recursive: true, force: false }).catch(() => undefined);
+  const htmlPath = await renderHtml(facts, targetDir);
+  const pdfPath = path.join(targetDir, `${safeFilePart(facts.companyName)}.pdf`);
+  const pdfCreated = await renderPdf(htmlPath, pdfPath);
+  const now = new Date().toISOString();
+  const record: PresentationRecord = {
+    id, userId, companyName: facts.companyName, website: facts.website,
+    createdAt: existing?.createdAt ?? now, updatedAt: now, htmlPath,
+    ...(pdfCreated ? { pdfPath } : {}),
+  };
+  await writeFile(path.join(targetDir, "presentation.json"), JSON.stringify(record, null, 2), "utf8");
+  return record;
+}
+
+// Совместимость со старым API: теперь аргументом должен быть сайт.
+export async function createPresentation(website: string): Promise<PresentationFile> {
+  const record = await createWebsitePresentation(0, website);
+  return { path: record.htmlPath, name: "index.html" };
 }

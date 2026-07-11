@@ -21,6 +21,17 @@ export type ContactRole =
   | "company"
   | "unknown";
 
+export type ContactKind = "telegram" | "email" | "phone" | "person";
+
+export interface CompanyContact {
+  kind: ContactKind;
+  value: string;
+  role: ContactRole;
+  name?: string;
+  label?: string;
+  sourceUrl?: string;
+}
+
 export interface TelegramContact {
   handle: string;
   url: string;
@@ -35,6 +46,8 @@ export interface CompanyLead {
   website: string;
   description: string;
   relevance: string;
+  region?: string;
+  contacts?: CompanyContact[];
   telegramContacts: TelegramContact[];
 }
 

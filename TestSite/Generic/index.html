@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{COMPANY}} — презентация</title>
+  <style>
+    *{box-sizing:border-box} :root{--accent:{{ACCENT}};--ink:#142033;--paper:#fff;--soft:#f4f7fb}
+    body{margin:0;background:var(--soft);color:var(--ink);font:18px/1.55 Arial,sans-serif}
+    main{max-width:1120px;margin:auto;background:var(--paper)} section{min-height:100vh;padding:8vh 8%;page-break-after:always;display:flex;flex-direction:column;justify-content:center}
+    .hero{background:linear-gradient(135deg,var(--accent),#142033);color:#fff}.tag{font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+    h1{font-size:64px;line-height:1.03;margin:.25em 0}h2{font-size:40px;margin:0 0 .6em;color:var(--accent)}
+    p{max-width:850px;font-size:22px}a{color:inherit}li{margin:.55em 0}.source{font-size:14px;word-break:break-all}
+    @media print{body{background:#fff}main{max-width:none}section{height:100vh;min-height:0}}
+  </style>
+</head>
+<body><main>
+  <section class="hero"><div class="tag">Персональная презентация · {{GENERATED_AT}}</div><h1>{{COMPANY}}</h1><p>{{DESCRIPTION}}</p><p><a href="{{WEBSITE}}">{{WEBSITE}}</a></p></section>
+  <section><h2>Компания и направления</h2><ul>{{HEADINGS}}</ul></section>
+  <section><h2>Продукты и услуги</h2><ul>{{SERVICES}}</ul></section>
+  <section><h2>Публичные контакты</h2><ul>{{CONTACTS}}</ul></section>
+  <section><h2>Источники</h2><p>В презентацию включены только данные, найденные на сайте компании.</p><ul class="source">{{SOURCES}}</ul></section>
+</main></body></html>
