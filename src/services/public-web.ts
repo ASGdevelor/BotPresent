@@ -1,14 +1,20 @@
 import { isIP } from "node:net";
-import { lookup } from "node:dns/promises";
+import { lookup, Resolver } from "node:dns/promises";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 
 const REQUEST_TIMEOUT_MS = 12_000;
 const MAX_REDIRECTS = 3;
-const MAX_HTML_SIZE = 2_000_000;
+const MAX_RESOURCE_SIZE = 2_000_000;
+const MAX_HTML_SIZE = 6_000_000;
 
 export class PublicWebError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
+  readonly code?: "DNS_LOOKUP" | "FETCH_FAILED" | "HTTP_ERROR" | "INVALID_RESPONSE";
+
+  constructor(message: string, options?: ErrorOptions & { code?: PublicWebError["code"] }) {
     super(message, options);
     this.name = "PublicWebError";
+    this.code = options?.code;
   }
 }
 
@@ -70,40 +76,121 @@ export function parsePublicHttpUrl(value: string): URL {
   return url;
 }
 
-async function assertPublicDns(url: URL): Promise<void> {
-  if (isIP(url.hostname)) return;
+interface ResolvedAddress {
+  address: string;
+  family: 4 | 6;
+}
 
-  let addresses: Array<{ address: string; family: number }>;
-  try {
-    addresses = await lookup(url.hostname, { all: true, verbatim: true });
-  } catch (error) {
-    throw new PublicWebError(`Не удалось определить адрес сайта ${url.hostname}.`, { cause: error });
-  }
-
+function assertAddressesPublic(url: URL, addresses: ResolvedAddress[]): void {
   if (addresses.length === 0 || addresses.some(({ address }) => isPrivateIp(address))) {
     throw new PublicWebError(`Сайт ${url.hostname} ведёт на запрещённый сетевой адрес.`);
   }
 }
 
-export async function fetchPublicHtml(input: string): Promise<{ html: string; finalUrl: string }> {
+async function resolveWithPublicDns(url: URL): Promise<ResolvedAddress[]> {
+  const resolver = new Resolver();
+  resolver.setServers(["1.1.1.1", "8.8.8.8"]);
+  const [ipv4, ipv6] = await Promise.allSettled([
+    resolver.resolve4(url.hostname),
+    resolver.resolve6(url.hostname),
+  ]);
+  return [
+    ...(ipv4.status === "fulfilled" ? ipv4.value.map((address) => ({ address, family: 4 as const })) : []),
+    ...(ipv6.status === "fulfilled" ? ipv6.value.map((address) => ({ address, family: 6 as const })) : []),
+  ];
+}
+
+/** Returns a pinned public address only when the operating-system resolver failed. */
+async function assertPublicDns(url: URL): Promise<ResolvedAddress | undefined> {
+  if (isIP(url.hostname)) return undefined;
+
+  let addresses: Array<{ address: string; family: number }>;
+  try {
+    addresses = await lookup(url.hostname, { all: true, verbatim: true });
+  } catch (error) {
+    try {
+      const fallback = await resolveWithPublicDns(url);
+      assertAddressesPublic(url, fallback);
+      return fallback[0];
+    } catch (fallbackError) {
+      throw new PublicWebError(`Не удалось определить адрес сайта ${url.hostname}.`, {
+        cause: fallbackError instanceof Error ? fallbackError : error,
+        code: "DNS_LOOKUP",
+      });
+    }
+  }
+  assertAddressesPublic(url, addresses.map(({ address, family }) => ({ address, family: family as 4 | 6 })));
+  return undefined;
+}
+
+async function fetchPinnedResource(url: URL, resolved: ResolvedAddress, accept: string, maxSize: number): Promise<Response> {
+  return await new Promise<Response>((resolve, reject) => {
+    const request = (url.protocol === "https:" ? httpsRequest : httpRequest)(url, {
+      headers: {
+        Accept: accept,
+        "Accept-Encoding": "identity",
+        "Accept-Language": "ru,en;q=0.8",
+        "User-Agent": "BotPresent/1.2 (+https://github.com/ASGdevelor/BotPresent)",
+      },
+      lookup: ((_hostname: string, options: { all?: boolean }, callback: (...args: unknown[]) => void) => {
+        if (options?.all) callback(null, [resolved]);
+        else callback(null, resolved.address, resolved.family);
+      }) as never,
+    }, (incoming) => {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      incoming.on("data", (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > maxSize) {
+          request.destroy(new PublicWebError(`Ответ сайта ${url.hostname} превышает допустимый размер.`));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      incoming.once("error", reject);
+      incoming.once("end", () => {
+        const headers = new Headers();
+        for (const [name, value] of Object.entries(incoming.headers)) {
+          if (Array.isArray(value)) value.forEach((item) => headers.append(name, item));
+          else if (value !== undefined) headers.set(name, value);
+        }
+        resolve(new Response(Buffer.concat(chunks), {
+          status: incoming.statusCode ?? 500,
+          statusText: incoming.statusMessage,
+          headers,
+        }));
+      });
+    });
+    request.setTimeout(REQUEST_TIMEOUT_MS, () => request.destroy(new Error("Request timeout")));
+    request.once("error", reject);
+    request.end();
+  });
+}
+
+async function fetchPublicResource(
+  input: string,
+  accept: string,
+  allowedTypes: string[],
+  maxSize = MAX_RESOURCE_SIZE,
+): Promise<{ text: string; finalUrl: string }> {
   let url = parsePublicHttpUrl(input);
 
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
-    await assertPublicDns(url);
+    const pinnedAddress = await assertPublicDns(url);
 
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = pinnedAddress ? await fetchPinnedResource(url, pinnedAddress, accept, maxSize) : await fetch(url, {
         redirect: "manual",
         headers: {
-          Accept: "text/html,application/xhtml+xml",
+          Accept: accept,
           "Accept-Language": "ru,en;q=0.8",
           "User-Agent": "BotPresent/1.1 (+https://github.com/ASGdevelor/BotPresent)",
         },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new PublicWebError(`Не удалось загрузить ${url.hostname}.`, { cause: error });
+      throw new PublicWebError(`Не удалось загрузить ${url.hostname}.`, { cause: error, code: "FETCH_FAILED" });
     }
 
     if (response.status >= 300 && response.status < 400) {
@@ -115,26 +202,52 @@ export async function fetchPublicHtml(input: string): Promise<{ html: string; fi
     }
 
     if (!response.ok) {
-      throw new PublicWebError(`Сайт ${url.hostname} вернул HTTP ${response.status}.`);
+      throw new PublicWebError(`Сайт ${url.hostname} вернул HTTP ${response.status}.`, { code: "HTTP_ERROR" });
     }
 
     const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-    if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
-      throw new PublicWebError(`Сайт ${url.hostname} вернул не HTML-документ.`);
+    if (contentType && !allowedTypes.some((type) => contentType.includes(type))) {
+      throw new PublicWebError(`Сайт ${url.hostname} вернул неподдерживаемый тип данных.`);
     }
 
     const declaredLength = Number(response.headers.get("content-length") ?? "0");
-    if (declaredLength > MAX_HTML_SIZE) {
-      throw new PublicWebError(`HTML сайта ${url.hostname} превышает допустимый размер.`);
+    if (declaredLength > maxSize) {
+      throw new PublicWebError(`Ответ сайта ${url.hostname} превышает допустимый размер.`);
     }
 
-    const html = await response.text();
-    if (html.length > MAX_HTML_SIZE) {
-      throw new PublicWebError(`HTML сайта ${url.hostname} превышает допустимый размер.`);
+    const text = await response.text();
+    if (text.length > maxSize) {
+      throw new PublicWebError(`Ответ сайта ${url.hostname} превышает допустимый размер.`);
     }
 
-    return { html, finalUrl: url.toString() };
+    return { text, finalUrl: url.toString() };
   }
 
   throw new PublicWebError("Не удалось завершить загрузку сайта.");
+}
+
+export async function fetchPublicHtml(input: string): Promise<{ html: string; finalUrl: string }> {
+  const result = await fetchPublicResource(
+    input,
+    "text/html,application/xhtml+xml",
+    ["text/html", "application/xhtml+xml"],
+    MAX_HTML_SIZE,
+  );
+  return { html: result.text, finalUrl: result.finalUrl };
+}
+
+/** Загружает публичный CSS с теми же SSRF-, redirect- и size-проверками, что и HTML. */
+export async function fetchPublicCss(input: string): Promise<{ css: string; finalUrl: string }> {
+  const result = await fetchPublicResource(input, "text/css,*/*;q=0.1", ["text/css"]);
+  return { css: result.text, finalUrl: result.finalUrl };
+}
+
+/** Загружает публичный RSS/XML, например серверную выдачу Bing. */
+export async function fetchPublicXml(input: string): Promise<{ xml: string; finalUrl: string }> {
+  const result = await fetchPublicResource(
+    input,
+    "application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.1",
+    ["application/rss+xml", "application/xml", "text/xml"],
+  );
+  return { xml: result.text, finalUrl: result.finalUrl };
 }

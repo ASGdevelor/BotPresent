@@ -45,4 +45,21 @@ describe("message history", () => {
     expect(store.clear(10, 100)).toBe(1);
     expect(store.list(10, 100)).toEqual([]);
   });
+
+  test("records presentation result with research status and source URLs", () => {
+    const store = createStore();
+    store.recordPresentationResult(10, 100, {
+      id: "example-1",
+      companyName: "Example",
+      website: "https://example.com/",
+      sources: ["https://example.com/", "https://ru.wikipedia.org/wiki/Example"],
+      researchStatus: "verified",
+    });
+
+    const [message] = store.list(10, 100);
+    expect(message?.direction).toBe("system");
+    expect(message?.text).toContain("example-1");
+    expect(message?.text).toContain("проверяемые отраслевые данные найдены");
+    expect(message?.text).toContain("https://ru.wikipedia.org/wiki/Example");
+  });
 });

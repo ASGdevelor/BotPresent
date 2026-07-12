@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LeafToGO × AI-инфлюенсеры</title>
+  <meta name="description" content="Персональное маркетинговое исследование LeafToGO: аудит, рынок БАД и коллагена, блогеры, AI-лица, видео и контент-система.">
+  <meta property="og:title" content="LeafToGO × AI-инфлюенсеры">
+  <meta property="og:description" content="Маркетинговый разбор LeafToGO и предложение первой серии AI-блогеров.">
+  <meta property="og:image" content="https://static.tildacdn.com/tild6438-6462-4365-b133-346533343530/logo-new-LTG-01.ico">
+  <style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#000000;
+  --green-2:#000000;
+  --green-3:#e8f5ed;
+  --acid:#000000;
+  --ink:#0f1f14;
+  --muted:#5a6b5f;
+  --line:#d4e0d6;
+  --soft:#f5faf6;
+  --paper:#fff;
+  --warn:#f2b84b;
+  --red:#ce4646;
+  --blue:#2c78be;
+}
+body{background:#fff;color:var(--ink);font:16px/1.6 "Open Sans",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+.wrap{max-width:1160px;margin:0 auto;padding:26px 24px 96px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;flex-wrap:wrap}
+.brandbar .lhs{display:flex;align-items:center;gap:14px}
+.logo-box{width:154px;height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;padding:8px 12px;box-shadow:0 12px 26px rgba(26,122,58,.08)}
+.logo-box img{max-width:100%;height:auto;display:block}
+.nm{font-weight:900;font-size:17px;letter-spacing:-.2px}
+.sub{color:var(--muted);font-size:12px}
+.rhs{font-size:13px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 14px}
+.catalog-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:38px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:13px 0}
+.catalog-nav span,.pill{font-size:13px;font-weight:900;color:#fff;background:var(--green);border-radius:999px;padding:7px 12px}
+.catalog-nav a{font-size:13px;font-weight:800;color:var(--green);background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 12px;text-decoration:none}
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) 420px;gap:38px;align-items:center}
+.step-no{font-size:12px;font-weight:900;color:var(--green);letter-spacing:.8px;text-transform:uppercase}
+h1{font-size:52px;line-height:1.04;font-weight:900;letter-spacing:-1.3px;margin:8px 0 18px;max-width:760px}
+h1 em{font-style:normal;color:var(--green)}
+h2{font-size:32px;font-weight:900;line-height:1.18;letter-spacing:-.7px;margin:6px 0 10px}
+h3{font-size:15px;font-weight:900;margin-bottom:4px}
+.hero p,.lead{font-size:18px;color:var(--muted);max-width:820px}
+.hero-card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 26px 62px rgba(26,122,58,.12)}
+.shop-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px}
+.shop-logo img{width:160px;height:auto;display:block}
+.shop-chip{font-size:12px;color:var(--green);background:var(--green-3);border-radius:999px;padding:6px 10px;font-weight:900}
+.searchbar{height:44px;border:1px solid var(--line);border-radius:12px;background:#f8fbf9;color:#8b988f;padding:10px 13px;font-size:13px;margin-bottom:14px}
+.product-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.product{border:1px solid var(--line);border-radius:16px;padding:12px;background:linear-gradient(180deg,#fff,var(--soft));min-height:148px}
+.product .pic{height:62px;border-radius:12px;margin-bottom:10px;background:#f2f6f3 center/contain no-repeat;position:relative;overflow:hidden;border:1px solid #eef2ef}
+.product .pic:after{content:"";position:absolute;right:10px;top:9px;width:30px;height:30px;border-radius:10px;background:var(--green-2);opacity:.85}
+.product b{display:block;font-size:13px;line-height:1.25;margin-bottom:6px}
+.product small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.p1 .pic{background-image:url("https://static.tildacdn.com/tild3530-6661-4736-b466-363634346635/270-04.png")}
+.p2 .pic{background-image:url("https://static.tildacdn.com/tild3433-3335-4135-a432-323332343632/photo.jpg")}
+.p3 .pic{background-image:url("https://static.tildacdn.com/tild6336-6439-4130-b362-363766316538/photo.jpg")}
+.p4 .pic{background-image:url("https://static.tildacdn.com/tild6132-3734-4165-b330-363564623733/photo.jpg")}
+.delivery-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.delivery-row div{background:var(--green-3);border-radius:14px;padding:11px;color:var(--green);font-size:12px;font-weight:900}
+.kpis{display:flex;gap:30px;margin:38px 0 0;flex-wrap:wrap}
+.kpi .n{font-size:38px;font-weight:900;letter-spacing:-1px}
+.kpi .l{color:var(--muted);font-size:14px;max-width:180px}
+.good{color:var(--green-2)}.bad{color:var(--red)}.blue{color:var(--blue)}
+.sec{margin-top:86px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.card{border:1px solid var(--line);border-radius:18px;padding:20px;background:#fff;box-shadow:0 8px 22px rgba(26,122,58,.045)}
+.card:hover{border-color:#a9d6b3;box-shadow:0 14px 34px rgba(26,122,58,.09);transform:translateY(-1px)}
+.ctitle{font-size:17px;font-weight:900;line-height:1.3;margin-bottom:8px;color:var(--green)}
+.cwhat{color:#37483d;font-size:14.5px}
+.dash2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chartcard{border:1px solid var(--line);border-radius:18px;padding:22px;background:#fff;box-shadow:0 8px 22px rgba(26,122,58,.045)}
+.chartcard .cap{font-size:12.5px;color:#8a978e;margin-bottom:14px}
+.cv{position:relative;height:300px}.cv.tall{height:360px}
+.note,.assume,.warn{border-radius:16px;padding:17px 18px;font-size:13.5px;margin:18px 0}
+.note{background:#eef9e9;border:1px solid #cae8bf;color:#315d20}
+.assume{background:var(--soft);border:1px solid var(--line);color:var(--muted)}
+.warn{background:#fff8e6;border:1px solid #efd99a;color:#805a0b}
+.note b,.assume b,.warn b{color:var(--ink)}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+.vscol{border-radius:18px;padding:22px;border:1px solid var(--line)}
+.vscol.old{background:#fff}.vscol.new{background:linear-gradient(160deg,#0f4f20,#1a7a3a);border-color:#0f5e22;color:#fff}
+.vscol h4{font-size:15px;font-weight:900;margin-bottom:14px}
+.vscol.old h4{color:var(--muted)}.vscol.new h4{color:#dcf5e2}
+.vli{display:flex;gap:10px;font-size:14px;margin-bottom:11px;line-height:1.45}
+.vli .ic{flex:0 0 auto;font-weight:900}.vscol.old .vli{color:var(--muted)}.vscol.new .vli{color:#f2fff5}
+.avatar-stage{background:linear-gradient(160deg,#08210f,#1a7a3a 60%,#228b45);border-radius:28px;padding:34px;color:#fff;box-shadow:0 26px 70px rgba(26,122,58,.2);overflow:hidden;position:relative}
+.avatar-stage:before{content:"";position:absolute;right:-130px;top:-150px;width:380px;height:380px;border-radius:50%;background:rgba(255,255,255,.08)}
+.avatar-stage .step-no,.avatar-stage h2{color:#fff}.avatar-stage .lead{color:#dff5e6}
+.phone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:24px}
+.phone{background:#07150c;border:1px solid rgba(255,255,255,.18);border-radius:32px;padding:12px;box-shadow:0 22px 44px rgba(0,0,0,.24)}
+.phone-screen{position:relative;overflow:hidden;border-radius:24px;background:#000;aspect-ratio:9/16}
+.phone-screen video{width:100%;height:100%;object-fit:cover;display:block}
+.phone-top{position:absolute;left:12px;right:12px;top:12px;z-index:2;display:flex;align-items:center;justify-content:space-between;color:#fff;font-size:11px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.45)}
+.phone-tag{background:rgba(12,33,20,.72);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 9px}
+.phone-caption{padding:14px 4px 4px;color:#dff5e6}
+.phone-caption b{display:block;color:#fff;font-size:15px;margin-bottom:5px}.phone-caption span{display:block;font-size:12.5px;line-height:1.45;color:#c8ead2}
+.video-note{margin-top:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:15px 17px;color:#e9fff0;font-size:13.5px}
+.steps3{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:8px}
+.stp{border:1px solid var(--line);border-radius:16px;padding:18px;background:#fff}
+.sn{display:inline-flex;width:28px;height:28px;background:var(--green);color:#fff;border-radius:9px;font-size:13px;font-weight:900;align-items:center;justify-content:center;margin-bottom:10px}
+.st{font-weight:900;font-size:15px;margin-bottom:4px}.sd{font-size:13px;color:var(--muted)}
+.casecard{border:1px solid #cde7ba;background:linear-gradient(160deg,#f6fbf2,#fff);border-radius:22px;padding:28px}
+.caseh{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.caselogo{font-size:18px;font-weight:900;color:var(--green);letter-spacing:-.3px}
+.casetag{font-size:11.5px;font-weight:900;color:var(--green);background:var(--green-3);border-radius:999px;padding:4px 12px;text-transform:uppercase;letter-spacing:.4px}
+.casegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+.casem .cn{font-size:30px;font-weight:900;letter-spacing:-1px;color:var(--green);line-height:1.1}
+.casem .cl{font-size:12.5px;color:var(--muted);margin-top:4px}
+.climax{background:linear-gradient(160deg,#f2faed,#fff);color:var(--ink);border:1px solid #cde7ba;border-radius:26px;padding:44px 38px;margin-top:24px;box-shadow:0 26px 70px rgba(26,122,58,.12)}
+.bigm{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:8px 0 26px}
+.bigm .n{font-size:38px;font-weight:900;letter-spacing:-1px;color:var(--green)}.bigm .l{color:var(--muted);font-size:13px}
+.cta{display:inline-flex;align-items:center;gap:10px;background:var(--green);color:#fff;font-weight:900;font-size:16px;padding:15px 28px;border-radius:14px;text-decoration:none;margin-top:8px;transition:.15s;box-shadow:0 14px 28px rgba(26,122,58,.24)}
+.cta:hover{background:#0c5019}
+.ctasub{color:var(--muted);font-size:13px;margin-top:14px}
+.foot{margin-top:80px;color:#8a978e;font-size:13px;border-top:1px solid var(--line);padding-top:28px}
+.contact{display:flex;flex-direction:column;gap:14px;margin-bottom:8px}.contact .cbig{font-size:22px;font-weight:900;color:var(--ink);letter-spacing:-.5px}
+.crow{display:flex;gap:12px;flex-wrap:wrap}.cpill{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:900;color:#fff;background:var(--green);border-radius:12px;padding:11px 18px;text-decoration:none}
+.src{font-size:11.5px;color:#98a29b;line-height:1.7;margin-top:18px;word-break:break-word}
+@media(max-width:900px){.hero{grid-template-columns:1fr}.hero-card{max-width:540px}.dash2{grid-template-columns:1fr}.phone-grid{grid-template-columns:1fr;max-width:420px}.steps3{grid-template-columns:1fr 1fr}}
+@media(max-width:680px){.wrap{padding:22px 16px 70px}h1{font-size:34px}h2{font-size:26px}.hero p,.lead{font-size:16.5px}.vs{grid-template-columns:1fr}.casegrid{grid-template-columns:1fr 1fr}.bigm{grid-template-columns:1fr}.brandbar .lhs{align-items:flex-start}.logo-box{width:142px}.product-grid{grid-template-columns:1fr}.delivery-row{grid-template-columns:1fr}.climax{padding:30px 20px}.kpis{gap:22px}.kpi .n{font-size:32px}}
+@media(max-width:460px){.steps3{grid-template-columns:1fr}.casegrid{grid-template-columns:1fr}.cpill{width:100%;justify-content:center}.catalog-nav a,.catalog-nav span{font-size:12px;padding:6px 10px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brandbar">
+    <div class="lhs">
+      <div class="logo-box"><img src="https://static.tildacdn.com/tild6438-6462-4365-b133-346533343530/logo-new-LTG-01.ico" alt="LeafToGO"></div>
+      <div><div class="nm">LeafToGO × AI-инфлюенсеры</div><div class="sub">персональный разбор сайта, рынка и первой серии контента</div></div>
+    </div>
+    <div class="rhs">leaftogo.ru.com · коллаген · БАД · июль 2026</div>
+  </div>
+
+  <div class="catalog-nav">
+    <span>Разбор</span>
+    <a href="#catalog">Коллаген</a>
+    <a href="#catalog">БАД</a>
+    <a href="#catalog">Витамины</a>
+    <a href="#market">Рынок</a>
+    <a href="#video">Видео</a>
+  </div>
+
+  <section class="hero">
+    <div>
+      <div class="step-no">Персональное исследование · leaftogo.ru.com</div>
+      <h1>У LeafToGO уже есть сильный продукт и доверие. Нужно превратить это в <em>серийные лица, видео</em>.</h1>
+      <p>Я разобрал LeafToGO как бренд-производителя коллагена, БАД и витаминов: ассортимент, отзывы, производство, маркетплейсы, соцсети и нишу здорового образа жизни. Вывод: база сильная, но потенциал контента выше текущего брендового голоса. Решение — сеть управляемых AI-лиц, которые объясняют категории, ведут в каталог и соблюдают аккуратные формулировки по БАД.</p>
+      <div class="kpis">
+        <div class="kpi"><div class="n good">4.9</div><div class="l">рейтинг магазина на отзывах покупателей</div></div>
+        <div class="kpi"><div class="n blue">2 млн+</div><div class="l">довольных покупателей по данным сайта</div></div>
+        <div class="kpi"><div class="n good">2000 м²</div><div class="l">собственная производственная площадка</div></div>
+        <div class="kpi"><div class="n good">1.6 млн+</div><div class="l">объём производства продукции в год</div></div>
+      </div>
+    </div>
+
+    <div class="hero-card" id="catalog">
+      <div class="shop-top">
+        <div class="shop-logo"><img src="https://static.tildacdn.com/tild6438-6462-4365-b133-346533343530/logo-new-LTG-01.ico" alt="LeafToGO"></div>
+        <div class="shop-chip">коллаген · витамины · БАД</div>
+      </div>
+      <div class="searchbar">Поиск по коллагену, витаминам, БАД...</div>
+      <div class="product-grid">
+        <div class="product p1"><div class="pic"></div><b>Коллаген</b><small>Пептидный коллаген I и III типа, морской коллаген, с гиалуроновой кислотой. Нужны короткие объясняющие ролики и подборки.</small></div>
+        <div class="product p2"><div class="pic"></div><b>Витамины и минералы</b><small>Магний, железо, коэнзим Q10, витамин С. Важно говорить без лечебных обещаний.</small></div>
+        <div class="product p3"><div class="pic"></div><b>Здоровье и восстановление</b><small>Сон, энергия, иммунитет, суставы, кожа. Категория хорошо живёт в Reels/Shorts.</small></div>
+        <div class="product p4"><div class="pic"></div><b>Дренажные напитки</b><small>Фитококтейли для поддержки баланса жидкости, снижения аппетита и веса.</small></div>
+      </div>
+      <div class="delivery-row">
+        <div>Доставка по России</div>
+        <div>Продажа на маркетплейсах и в аптеках</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="step-no">Шаг 1 · что уже сильное</div>
+    <h2>У бренда есть товарная глубина, доверие и производство. Это можно упаковать в регулярную медиасистему</h2>
+    <p class="lead">LeafToGO не нужно объяснять рынку, что такое коллаген и БАД с нуля. Задача другая: перевести большой ассортимент в простые сценарии выбора, удержать доверие и сделать контент не разовым, а ежедневным.</p>
+    <div class="cards">
+      <div class="card"><div class="ctitle">Собственное производство</div><div class="cwhat">2000 м² производственная площадка, 1.6 млн+ единиц продукции в год. Это сильный доверительный сигнал для контента.</div></div>
+      <div class="card"><div class="ctitle">Широкая дистрибуция</div><div class="cwhat">Продажи на Ozon, Wildberries, Яндекс Маркет, в аптеках и магазинах по всей России. Готовый охват для контент-воронки.</div></div>
+      <div class="card"><div class="ctitle">Отзывы подтверждают качество</div><div class="cwhat">Рейтинг 4.9, 2 млн+ довольных покупателей. В отзывах часто повторяются эффективность, качество и удобство применения.</div></div>
+      <div class="card"><div class="ctitle">Ниша требует объяснения</div><div class="cwhat">Покупатель коллагена и БАД сравнивает состав, дозировки, бренды, эффект и совместимость. Баннер не закрывает этот путь, а видео-рекомендация закрывает.</div></div>
+      <div class="card"><div class="ctitle">Есть потенциал серийности</div><div class="cwhat">Коллаген и витамины покупают повторно каждые 1–2 месяца. Это идеальный товар для блогерского формата «начала курс → показываю результат».</div></div>
+      <div class="card"><div class="ctitle">Нужен claims-control</div><div class="cwhat">В БАД нельзя обещать лечение и гарантированный результат. AI-персонажи удобны тем, что сценарий контролируется заранее и не уходит в рискованные формулировки.</div></div>
+    </div>
+  </section>
+
+  <section class="sec" id="market">
+    <div class="step-no">Шаг 2 · рынок</div>
+    <h2>Рынок БАД и коллагена растёт, но покупатель становится рациональнее: выигрывает тот, кто объясняет</h2>
+    <p class="lead">По данным DSM Group, аптечный рынок БАД в России в 2025 году вырос до 129.8 млрд рублей (+24.9% год к году)[reference:0]. Рынок коллагена в косметологии достиг 3 млрд рублей (+13% к 2024 году)[reference:1]. Это означает: денег в категории больше, но покупатель выбирает внимательнее, а цена ошибки выше.</p>
+    <div class="dash2">
+      <div class="chartcard">
+        <h3>Рынок БАД РФ: деньги растут</h3>
+        <div class="cap">Открытые данные DSM Group, 2025</div>
+        <div class="cv"><canvas id="cMarket"></canvas></div>
+      </div>
+      <div class="chartcard">
+        <h3>Рынок коллагена в России</h3>
+        <div class="cap">Объём и динамика, 2024–2025</div>
+        <div class="cv"><canvas id="cCollagen"></canvas></div>
+      </div>
+    </div>
+    <div class="note"><b>Что это значит для LeafToGO:</b> аудитория готова платить за коллаген и БАД, но ей нужны уверенность, оригинальность, объяснение состава и быстрый путь к заказу. Серийные AI-лица могут закрыть этот разрыв между большим ассортиментом и конкретным выбором клиента.</div>
+  </section>
+
+  <section class="sec">
+    <div class="step-no">Шаг 3 · обычные блогеры</div>
+    <h2>Инфлюенсеры подходят нише, но живой блогер плохо масштабируется и плохо контролируется</h2>
+    <p class="lead">Для LeafToGO важны не только охваты. Нужно много контента под разные категории, регулярные поводы, промокоды, безопасные формулировки, отсутствие репутационных сюрпризов и быстрые реакции на тренды.</p>
+    <div class="vs">
+      <div class="vscol old">
+        <h4>Живой блогер</h4>
+        <div class="vli"><span class="ic">−</span><span>Гонорар за каждую интеграцию, съёмку, монтаж и пересъёмку.</span></div>
+        <div class="vli"><span class="ic">−</span><span>Согласования идут неделями, а контент нужен постоянно.</span></div>
+        <div class="vli"><span class="ic">−</span><span>Риск отсебятины: блогер может сказать “лечит”, “гарантирует”, “заменяет терапию”.</span></div>
+        <div class="vli"><span class="ic">−</span><span>Один человек не закроет коллаген, БАД, beauty, витамины и родительские сценарии одновременно.</span></div>
+      </div>
+      <div class="vscol new">
+        <h4>AI-блогер</h4>
+        <div class="vli"><span class="ic">+</span><span>Персонаж создаётся один раз, дальше масштабируется сериями.</span></div>
+        <div class="vli"><span class="ic">+</span><span>Можно выпускать десятки роликов под разные категории и сезоны.</span></div>
+        <div class="vli"><span class="ic">+</span><span>Текст и дисклеймеры заранее согласованы: “не является лекарством”, без чудо-обещаний.</span></div>
+        <div class="vli"><span class="ic">+</span><span>Сеть лиц закрывает сегменты: спортсмен, нутрициологичный ведущий, мама, beauty, 35+.</span></div>
+      </div>
+    </div>
+    <div class="dash2" style="margin-top:16px">
+      <div class="chartcard">
+        <h3>Экономика контента</h3>
+        <div class="cap">Условная стоимость единицы контента при одинаковом контроле сценария</div>
+        <div class="cv"><canvas id="cEconomy"></canvas></div>
+      </div>
+      <div class="chartcard">
+        <h3>Объём публикаций</h3>
+        <div class="cap">Единиц контента в месяц, оценка для пилотной системы</div>
+        <div class="cv"><canvas id="cVolume"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="video">
+    <div class="avatar-stage">
+      <div class="step-no">Видео · первые AI-блогеры</div>
+      <h2>Вот как это может выглядеть в телефоне клиента LeafToGO</h2>
+      <p class="lead">Видео скопированы из референса `fito.roky.video`, но в HTML все пути сделаны абсолютными. Для реального запуска персонажи нужно пересобрать под LeafToGO: коллаген, БАД, витамины, доставка и безопасные формулировки.</p>
+      <div class="phone-grid">
+        <div class="phone">
+          <div class="phone-screen">
+            <video src="https://fito.roky.video/fito-ai-video-1.mp4" poster="https://fito.roky.video/fito-ai-video-1-poster.jpg" autoplay muted loop playsinline></video>
+            <div class="phone-top"><span class="phone-tag">Коллаген</span><span>AI-гид</span></div>
+          </div>
+          <div class="phone-caption"><b>Коллаген для кожи и суставов</b><span>Простые объяснения: зачем пить коллаген, какую форму выбрать, когда нужен врач, где перейти в каталог LeafToGO.</span></div>
+        </div>
+        <div class="phone">
+          <div class="phone-screen">
+            <video src="https://fito.roky.video/fito-ai-video-2.mp4" poster="https://fito.roky.video/fito-ai-video-2-poster.jpg" autoplay muted loop playsinline></video>
+            <div class="phone-top"><span class="phone-tag">Витамины</span><span>AI-нутрициолог</span></div>
+          </div>
+          <div class="phone-caption"><b>Витамины и минералы</b><span>Сценарии под иммунитет, энергию, красоту и промокоды без токсичных обещаний результата.</span></div>
+        </div>
+        <div class="phone">
+          <div class="phone-screen">
+            <video src="https://fito.roky.video/fito-ai-video-3.mp4" poster="https://fito.roky.video/fito-ai-video-3-poster.jpg" autoplay muted loop playsinline></video>
+            <div class="phone-top"><span class="phone-tag">ЗОЖ</span><span>AI-эксперт</span></div>
+          </div>
+          <div class="phone-caption"><b>Здоровый образ жизни</b><span>Подборки продуктов, сравнение, сезонные акции и объяснение, как заказать через LeafToGO.</span></div>
+        </div>
+      </div>
+      <div class="video-note"><b>Почему это работает:</b> каждый ролик связан с бизнесом: категория каталога -> сценарий выбора -> аккуратная формулировка -> переход в товарную подборку, промокод или консультацию.</div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="step-no">Шаг 4 · контент-матрица</div>
+    <h2>Первая серия должна идти от категорий LeafToGO, а не от абстрактного аватара</h2>
+    <p class="lead">Нужны не “AI ради AI”, а управляемые рубрики, которые можно связать с товарными полками и измерять через промокоды/UTM.</p>
+    <div class="steps3">
+      <div class="stp"><div class="sn">1</div><div class="st">Категории и ограничения</div><div class="sd">Выбрать 12-15 направлений: коллаген, витамины, минералы, здоровье, красота, детокс, товары для детей.</div></div>
+      <div class="stp"><div class="sn">2</div><div class="st">AI-лица под сегменты</div><div class="sd">Спортсмен, нутри-гид, smart shopper, beauty/wellness, родительский персонаж.</div></div>
+      <div class="stp"><div class="sn">3</div><div class="st">Вертикальные ролики</div><div class="sd">Shorts/Reels/TikTok: 20-35 секунд, один тезис, одна полка, один CTA.</div></div>
+      <div class="stp"><div class="sn">4</div><div class="st">Трафик и отчёт</div><div class="sd">Промокоды, UTM, карточки товаров, сравнение рубрик по кликам и заказам.</div></div>
+    </div>
+    <div class="assume"><b>Формат пилота:</b> 30 дней, 3 персонажа, 18-24 ролика, 6 товарных подборок, один общий claims-гайд по БАД и коллагену.</div>
+  </section>
+
+  <section class="sec">
+    <div class="step-no">Шаг 5 · бенчмарк</div>
+    <h2>В категории БАД уже доказана сила инфлюенсерской механики</h2>
+    <p class="lead">Кейс iHerb x Perfluence показывает, что товары для здоровья хорошо продаются не через один баннер, а через множество доверительных рекомендаций, промокодов и повторных касаний.</p>
+    <div class="casecard">
+      <div class="caseh">
+        <div class="caselogo">iHerb x Perfluence</div>
+        <div class="casetag">мировой бенчмарк ниши БАД</div>
+      </div>
+      <div class="casegrid">
+        <div class="casem"><div class="cn">8 500+</div><div class="cl">российских блогеров в кампании</div></div>
+        <div class="casem"><div class="cn">744.5 млн</div><div class="cl">совокупный охват подписчиков</div></div>
+        <div class="casem"><div class="cn">~1 млн</div><div class="cl">переходов по ссылкам за 8 месяцев</div></div>
+        <div class="casem"><div class="cn">14%</div><div class="cl">ДРР в описании кейса</div></div>
+      </div>
+      <div class="assume"><b>Что берём в LeafToGO:</b> механику доверия, промокоды, серийные рубрики и много лиц под разные аудитории. Что меняем: делаем это управляемо через AI-персонажей и заранее согласованные сценарии.</div>
+    </div>
+    <div class="dash2" style="margin-top:16px">
+      <div class="chartcard">
+        <h3>Кому доверяют при выборе добавок</h3>
+        <div class="cap">Иллюстрация на основе логики категории: рекомендация сильнее баннера</div>
+        <div class="cv"><canvas id="cTrust"></canvas></div>
+      </div>
+      <div class="chartcard">
+        <h3>Эффект сети лиц</h3>
+        <div class="cap">Относительный охват при масштабировании персонажей</div>
+        <div class="cv"><canvas id="cReach"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="climax">
+      <div class="step-no">Предложение</div>
+      <h2>Сделать первую серию AI-блогеров для LeafToGO за 30 дней, затем масштабировать до стабильного контент-потока</h2>
+      <p class="lead">У LeafToGO уже есть ассортимент, отзывы, производство, дистрибуция и товарные направления. Следующий рост — регулярные лица, которые объясняют выбор, снимают страх перед БАД/коллагеном и ведут в конкретные категории сайта.</p>
+      <div class="bigm">
+        <div><div class="n">−70%</div><div class="l">оценочно к стоимости единицы контента против живых блогеров</div></div>
+        <div><div class="n">×10</div><div class="l">больше единиц контента в месяц при тех же согласованиях</div></div>
+        <div><div class="n">0</div><div class="l">рисков отсебятины в медицинских обещаниях при готовом claims-гайде</div></div>
+      </div>
+      <div class="chartcard" style="margin-bottom:26px">
+        <h3>План работы · 90 дней</h3>
+        <div class="cap">От тестовых роликов до измеримой контент-воронки</div>
+        <div class="cv"><canvas id="cRoadmap"></canvas></div>
+      </div>
+     <a class="cta" href="tel:+375445556636" target="_blank" rel="noopener">Номер телефона для связи: +375 44 555 6636</a>
+     <a class="cta" href="https://t.me" target="_blank" rel="noopener">Написать в Telegram</a>
+
+      <div class="ctasub">На встрече показываю структуру первой серии, список роликов, claims-control и какие AI-видео нужно пересобрать под LeafToGO. Оценочные цифры уточняются под объём и каналы.</div>
+    </div>
+  </section>
+
+ 
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const GREEN='#1a7a3a', GREEN2='#228b45', ACID='#b8e04a', RED='#ce4646', BLUE='#2c78be', GREY='#8a978e', LINE='#dce8df';
+Chart.defaults.font.family='"Open Sans", Inter, -apple-system, sans-serif';
+Chart.defaults.font.size=12;
+const noLegend={plugins:{legend:{display:false}}};
+
+new Chart(document.getElementById('cMarket'),{type:'bar',
+ data:{labels:['Рынок БАД, млрд руб.','Рост в рублях'],
+ datasets:[{data:[129.8,24.9],backgroundColor:[GREEN,GREEN2],borderRadius:8}]},
+ options:{...noLegend,scales:{y:{beginAtZero:false,grid:{color:LINE}}},
+ plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+(c.dataIndex===0?' млрд руб.':'%')}}}}});
+
+new Chart(document.getElementById('cCollagen'),{type:'bar',
+ data:{labels:['2024','2025','Рост'],
+ datasets:[{data:[2.65,3.0,13],backgroundColor:[GREEN2,GREEN,BLUE],borderRadius:8}]},
+ options:{...noLegend,scales:{y:{beginAtZero:false,grid:{color:LINE}}},
+ plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+(c.dataIndex===2?'%':' млрд руб.')}}}}});
+
+new Chart(document.getElementById('cEconomy'),{type:'bar',
+ data:{labels:['Живой блогер','AI-блогер'],
+ datasets:[{data:[100,30],backgroundColor:[GREY,GREEN2],borderRadius:8}]},
+ options:{...noLegend,scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'%'}}},
+ plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'~'+c.parsed.y+'% от базовой стоимости'}}}}});
+
+new Chart(document.getElementById('cVolume'),{type:'bar',
+ data:{labels:['Живой блогер','Сеть AI-лиц'],
+ datasets:[{data:[4,40],backgroundColor:[GREY,GREEN2],borderRadius:8}]},
+ options:{...noLegend,scales:{y:{beginAtZero:true,ticks:{callback:v=>v+' шт'}}},
+ plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'~'+c.parsed.y+' единиц контента/мес'}}}}});
+
+new Chart(document.getElementById('cTrust'),{type:'bar',
+ data:{labels:['Блогер / эксперт','Отзывы покупателей','Контент бренда','Баннер / контекст'],
+ datasets:[{data:[82,74,48,24],backgroundColor:[GREEN2,GREEN,BLUE,LINE],borderRadius:6}]},
+ options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+  scales:{x:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}},y:{ticks:{font:{size:12}}}},
+  plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'доверие ~'+c.parsed.x+'% (модельная иллюстрация)'}}}}});
+
+new Chart(document.getElementById('cReach'),{type:'bar',
+ data:{labels:['1 блогер','5 AI-лиц','15 AI-лиц'],
+ datasets:[{data:[1,5,15],backgroundColor:['#bfe3c9',GREEN2,GREEN],borderRadius:8}]},
+ options:{...noLegend,scales:{y:{beginAtZero:true,ticks:{callback:v=>'x'+v}}},
+ plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'охват x'+c.parsed.y+' относительно 1 лица'}}}}});
+
+new Chart(document.getElementById('cRoadmap'),{type:'bar',
+ data:{labels:['Claims-гайд','Персонажи','Контент-матрица','Первые видео','Промокоды/UTM','Масштабирование'],
+ datasets:[{data:[[0,2],[1,4],[2,5],[4,8],[6,10],[9,12]],backgroundColor:[GREEN2,'#2fa947',GREEN,BLUE,'#74bb63','#0f4f20'],borderRadius:6,barPercentage:.7}]},
+ options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+  scales:{x:{min:0,max:12,grid:{color:LINE},ticks:{stepSize:4,callback:v=>'нед. '+v}},y:{grid:{display:false}}},
+  plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>c[0].label,label:c=>'недели '+c.raw[0]+'-'+c.raw[1]}}}}});
+</script>
+</body>
+</html>

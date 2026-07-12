@@ -9,6 +9,8 @@
     "dev": "bun --watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "verify:presentation": "bun run scripts/verify-presentation.ts",
+    "verify:presentation:live": "bun run scripts/verify-live-presentation.ts",
     "check": "bun run typecheck && bun test"
   },
   "dependencies": {

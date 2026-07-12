@@ -25,6 +25,19 @@ describe("lead generation parsing", () => {
     expect(exact.matchKind).toBe("exact");
     expect(similar.matchKind).toBe("similar");
   });
+
+  test("does not downgrade an exact company match when buyer role is absent", () => {
+    const criteria = {
+      whoCanBuy: "владелец сайта",
+      whoToFind: "Example Domain",
+      whereToSearch: "https://example.com",
+      offer: "создание презентации",
+      exclusions: "нет",
+    };
+    const result = scoreCompany("Example Domain is reserved for documentation", criteria, true, 0);
+    expect(result.matchKind).toBe("exact");
+    expect(result.matchedKeywords).toEqual(["exam", "domain"]);
+  });
   test("extracts explicit sites from the search field", () => {
     expect(extractExplicitUrls("Москва: example.com, https://acme.ru/contacts")).toEqual([
       "https://example.com/",

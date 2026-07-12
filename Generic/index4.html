@@ -1,0 +1,1130 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UltraBalance x AI-инфлюенсеры</title>
+  <meta name="description"
+    content="Маркетинговый разбор UltraBalance: рынок БАД, контент-система, AI-инфлюенсеры, графики и первые видеоформаты.">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --ink: #101010;
+      --muted: #5e5e5e;
+      --line: #e0e0e0;
+      --paper: #f2f2f2;
+      --soft: #f7eac0;
+      --gold: #ad8957;
+      --gold-2: #c8a36f;
+      --cream: #f7eac0;
+      --dark: #000;
+      --green: #767060;
+      --red: #f52525;
+      --white: #fff;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .10);
+    }
+
+    body {
+      font: 16px/1.58 Ubuntu, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #fff 0, #fff 520px, #f7f7f7 100%);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    img,
+    video,
+    canvas {
+      max-width: 100%;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .wrap {
+      width: min(1160px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 24px 0 92px;
+    }
+
+    .brandbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 280px;
+    }
+
+    .brand img {
+      width: 214px;
+      max-width: 52vw;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .08));
+    }
+
+    .brand-title {
+      font-weight: 900;
+      font-size: 15px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .date-pill {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 1px;
+      padding: 9px 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 13px 0 30px;
+      border-top: 1px solid var(--line);
+    }
+
+    .nav a,
+    .nav span {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 1px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .nav span {
+      background: var(--soft);
+      border-color: var(--soft);
+      color: #000;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) 420px;
+      gap: 34px;
+      align-items: center;
+      padding-top: 12px;
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .11em;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: clamp(38px, 5vw, 66px);
+      line-height: 1.01;
+      letter-spacing: -1.2px;
+      font-weight: 950;
+      max-width: 760px;
+      margin-bottom: 18px;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--gold);
+    }
+
+    .hero-copy {
+      color: var(--muted);
+      font-size: 19px;
+      max-width: 780px;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 34px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 1px;
+      padding: 16px;
+      min-height: 116px;
+    }
+
+    .kpi .n {
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 950;
+      color: var(--gold);
+      letter-spacing: -1px;
+    }
+
+    .kpi .l {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+
+    .shop-card {
+      border: 1px solid var(--line);
+      border-radius: 1px;
+      padding: 18px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .shop-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .shop-top b {
+      font-size: 19px;
+    }
+
+    .shop-chip {
+      background: var(--soft);
+      color: #000;
+      border-radius: 1px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .searchbar {
+      border: 1px solid #c1c1c1;
+      border-radius: 1px;
+      color: #acacac;
+      padding: 13px 14px;
+      margin-bottom: 12px;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .product {
+      min-height: 190px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 1px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .product img {
+      width: 100%;
+      height: 92px;
+      object-fit: contain;
+      margin-bottom: 8px;
+      background: #f4f4f4;
+      border-radius: 6px;
+    }
+
+    .product b {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .product small {
+      color: var(--muted);
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .product .price {
+      margin-top: auto;
+      padding-top: 8px;
+      color: var(--gold);
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .section {
+      margin-top: 86px;
+    }
+
+    h2 {
+      font-size: clamp(28px, 3vw, 38px);
+      line-height: 1.1;
+      letter-spacing: -.6px;
+      font-weight: 950;
+      margin: 6px 0 10px;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 830px;
+      margin-bottom: 26px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+      gap: 14px;
+    }
+
+    .card,
+    .chartcard,
+    .note,
+    .case {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 1px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, .05);
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .card b {
+      display: block;
+      color: var(--gold);
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      color: #3f3a31;
+      font-size: 14.5px;
+    }
+
+    .dash2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .chartcard {
+      padding: 22px;
+      min-width: 0;
+    }
+
+    .chartcard h3 {
+      font-size: 15px;
+      font-weight: 950;
+      margin-bottom: 4px;
+    }
+
+    .chartcard .cap {
+      color: #968b7a;
+      font-size: 12.5px;
+      margin-bottom: 14px;
+    }
+
+    .cv {
+      position: relative;
+      height: 320px;
+    }
+
+    .note {
+      padding: 18px 20px;
+      background: var(--soft);
+      color: #303030;
+      font-size: 14px;
+      margin-top: 18px;
+    }
+
+    .note b {
+      color: var(--ink);
+    }
+
+    .vs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .vscol {
+      border-radius: 1px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .vscol.new {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
+
+    .vscol h3 {
+      font-size: 18px;
+      margin-bottom: 14px;
+      font-weight: 950;
+    }
+
+    .vli {
+      display: flex;
+      gap: 10px;
+      margin: 11px 0;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .vscol.new .vli {
+      color: #ece0c5;
+    }
+
+    .avatar-stage {
+      padding: 34px;
+      border-radius: 1px;
+      background: linear-gradient(145deg, #000 0, #202020 54%, #ad8957 100%);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .avatar-stage .eyebrow,
+    .avatar-stage h2 {
+      color: #fff;
+    }
+
+    .avatar-stage .lead {
+      color: #fff2d0;
+    }
+
+    .phone-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 24px;
+    }
+
+    .phone {
+      background: #070707;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 28px;
+      padding: 12px;
+    }
+
+    .screen {
+      position: relative;
+      aspect-ratio: 9/16;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .screen video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .tagline {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, .5);
+    }
+
+    .tagline span:first-child {
+      background: rgba(0, 0, 0, .45);
+      border-radius: 999px;
+      padding: 6px 9px;
+    }
+
+    .phone-caption {
+      padding: 13px 4px 3px;
+    }
+
+    .phone-caption b {
+      color: #fff;
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .phone-caption span {
+      color: #f1dfb2;
+      display: block;
+      font-size: 12.5px;
+      line-height: 1.42;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 1px;
+      padding: 18px;
+    }
+
+    .step .num {
+      width: 30px;
+      height: 30px;
+      border-radius: 1px;
+      display: grid;
+      place-items: center;
+      background: var(--gold);
+      color: #fff;
+      font-weight: 950;
+      margin-bottom: 10px;
+    }
+
+    .step b {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .case {
+      padding: 28px;
+      background: #fff;
+    }
+
+    .case-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .case-logo {
+      color: var(--gold);
+      font-size: 19px;
+      font-weight: 950;
+    }
+
+    .case-tag {
+      background: var(--soft);
+      border: 1px solid var(--soft);
+      color: #000;
+      border-radius: 1px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .case-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .case-m .cn {
+      color: var(--gold);
+      font-weight: 950;
+      font-size: 29px;
+      line-height: 1.05;
+    }
+
+    .case-m .cl {
+      color: var(--muted);
+      font-size: 12.5px;
+      margin-top: 5px;
+    }
+
+    .offer {
+      border-radius: 1px;
+      background: #000;
+      color: #fff;
+      padding: 42px 36px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .offer:before {
+      content: "";
+      position: absolute;
+      right: -110px;
+      top: -140px;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      background: rgba(247, 234, 192, .16);
+    }
+
+    .offer>* {
+      position: relative;
+    }
+
+    .offer .lead {
+      color: #efe1c4;
+    }
+
+    .bigm {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .bigm div {
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 8px;
+      padding: 18px;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    .bigm .n {
+      color: var(--soft);
+      font-size: 38px;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .bigm .l {
+      color: #efe1c4;
+      font-size: 13px;
+      margin-top: 7px;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      padding: 0 24px;
+      border-radius: 6px;
+      background: var(--gold);
+      color: #fff;
+      font-weight: 950;
+      text-decoration: none;
+    }
+
+    .foot {
+      margin-top: 70px;
+      border-top: 1px solid var(--line);
+      padding-top: 28px;
+      color: #8a8070;
+      font-size: 13px;
+    }
+
+    .sources {
+      margin-top: 18px;
+      font-size: 11.5px;
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .sources a {
+      color: #7d5b2e;
+    }
+
+    @media (max-width: 920px) {
+
+      .hero,
+      .dash2,
+      .vs {
+        grid-template-columns: 1fr;
+      }
+
+      .kpis {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .phone-grid {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+      }
+
+      .steps,
+      .case-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .wrap {
+        width: min(100% - 28px, 1160px);
+        padding-bottom: 60px;
+      }
+
+      .kpis,
+      .product-grid,
+      .steps,
+      .case-grid,
+      .bigm {
+        grid-template-columns: 1fr;
+      }
+
+      .avatar-stage,
+      .offer {
+        padding: 26px 18px;
+      }
+
+      .section {
+        margin-top: 64px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <header class="brandbar">
+      <div class="brand">
+        <img src="assets/ultrabalance-logo.jpg" alt="UltraBalance">
+        <div>
+          <div class="brand-title">UltraBalance x AI-инфлюенсеры</div>
+          <div class="brand-sub">персональный разбор и первая серия контента</div>
+        </div>
+      </div>
+      <div class="date-pill">ultrabalance.ru · БАДы, витамины, спорт · июль 2026</div>
+    </header>
+
+    <nav class="nav">
+      <span>Разбор</span>
+      <a href="#research">Рынок</a>
+      <a href="#catalog">Каталог</a>
+      <a href="#videos">Видео</a>
+      <a href="#plan">План</a>
+      <a href="#offer">Предложение</a>
+    </nav>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Маркетинговый разбор · UltraBalance</div>
+        <h1>У UltraBalance уже есть продуктовая база. Нужно дать ей <em>лица, сценарии и регулярный внешний спрос</em>.
+        </h1>
+        <p class="hero-copy">
+          Я разобрал UltraBalance как российский бренд БАДов и нутрицевтиков: каталог, продуктовые линейки, сайт, цены,
+          отзывы, рынок, онлайн-покупку витаминов и механику доверия. Вывод: ассортимент закрывает сильные потребности,
+          но категории требуют объяснения. Это идеальная зона для управляемых AI-инфлюенсеров, которые регулярно
+          переводят сложный продукт в понятные сценарии покупки.
+        </p>
+        <div class="kpis">
+          <div class="kpi">
+            <div class="n">182,5 млрд</div>
+            <div class="l">рублей: аптечный рынок БАД РФ в 2025 году по данным DSM Group</div>
+          </div>
+          <div class="kpi">
+            <div class="n">+23,9%</div>
+            <div class="l">рост продаж БАД в деньгах год к году в 2025 году</div>
+          </div>
+          <div class="kpi">
+            <div class="n">65%</div>
+            <div class="l">примерная доля аптек как ведущего канала реализации БАД</div>
+          </div>
+          <div class="kpi">
+            <div class="n">30 дней</div>
+            <div class="l">на пилотную серию роликов с понятными claims и CTA</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="shop-card" id="catalog">
+        <div class="shop-top">
+          <b>ultrabalance.ru</b>
+          <span class="shop-chip">цель: продлить молодость и жизнь</span>
+        </div>
+        <div class="searchbar">Поиск по Omega-3, D3, магнию, коллагену...</div>
+        <div class="product-grid">
+          <div class="product">
+            <img src="https://api.ultrabalance.ru/media/product-photo/37c28a5f5c30a00c479c6f495b98784dcropp2904.jpg"
+              alt="Omega-3 UltraBalance">
+            <b>Omega-3 1620mg Premium</b><small>сердце, сосуды, мозг, суставы; 5039 заказов и рейтинг 4.99 на
+              сайте</small>
+            <div class="price">1991 ₽</div>
+          </div>
+          <div class="product">
+            <img src="https://api.ultrabalance.ru/media/product-photo/55168d6900e9de00ccc5c8634c302163cropp984.jpg"
+              alt="Magnesium & Vitamin B6">
+            <b>Magnesium & Vitamin B6</b><small>стресс, сон, спортивная работоспособность; понятный продукт для серийных
+              роликов</small>
+            <div class="price">1497 ₽</div>
+          </div>
+          <div class="product">
+            <img src="https://api.ultrabalance.ru/media/product-photo/a7099da7dd598294bcea32526cf2aa51cropp109.png"
+              alt="Vitamin D3 Premium">
+            <b>Vitamin D3 Premium</b><small>иммунитет и сезонность; сильный формат для осени, зимы и анализа
+              дефицитов</small>
+            <div class="price">каталог</div>
+          </div>
+          <div class="product">
+            <img src="https://api.ultrabalance.ru/media/product-photo/be14356d11ece86dd82cb70154744ac4cropp116.png"
+              alt="Hair Skin Nails Premium">
+            <b>Hair, Skin & Nails Premium</b><small>кожа, волосы, ногти; beauty-сценарии без медицинских
+              обещаний</small>
+            <div class="price">каталог</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="eyebrow">Шаг 1 · что уже сильное</div>
+      <h2>UltraBalance не нужно объяснять, что такое БАД. Нужно объяснить, зачем конкретный продукт конкретному
+        человеку.</h2>
+      <p class="lead">Ассортимент уже разложен по покупательским задачам: иммунитет, энергия, сон, стресс, спорт, кожа,
+        суставы, сердце, мозг. Это готовая матрица для коротких роликов, сторис, карточек и промокодных воронок.</p>
+      <div class="cards">
+        <div class="card"><b>Сильный каталог</b>
+          <p>На сайте представлены Omega-3, Vitamin D3, Magnesium & B6, B-Complex, коллаген, цинк, селен, аминокислоты и
+            спорт-линейка. Это не один герой-продукт, а регулярная контент-сетка.</p>
+        </div>
+        <div class="card"><b>Доказуемые социальные сигналы</b>
+          <p>В карточках есть заказы, оценки и отзывы. Например, Omega-3 показывает 5039 заказов и рейтинг около 4.99.
+            Это нужно превращать в доверительные proof-блоки.</p>
+        </div>
+        <div class="card"><b>Продуктовые поводы</b>
+          <p>Сезон витамина D, стресс и сон, спорт, кожа и волосы, мужское и женское здоровье дают поводы для серий, а
+            не разовых рекламных выходов.</p>
+        </div>
+        <div class="card"><b>Цена и доступность</b>
+          <p>Популярные позиции находятся в диапазоне массовой покупки. Это удобно для промокодов, наборов, повторных
+            покупок и подписочной механики.</p>
+        </div>
+        <div class="card"><b>Нужен внешний голос</b>
+          <p>Категории сложные: покупатель сравнивает, боится ошибиться и ищет простое объяснение. Одной карточки товара
+            недостаточно.</p>
+        </div>
+        <div class="card"><b>Claims-control критичен</b>
+          <p>БАДы нельзя продавать как лечение. AI-персонажи удобны тем, что формулировки можно заранее ограничить и
+            согласовать.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="research">
+      <div class="eyebrow">Шаг 2 · маркетинговое исследование</div>
+      <h2>Рынок растет в деньгах, а покупка уходит в онлайн. Побеждает тот, кто объясняет и вызывает доверие.</h2>
+      <p class="lead">Проверенные открытые данные: по публикации IncRussia со ссылкой на DSM Group, продажи БАД в
+        деньгах в 2025 году выросли до 182,5 млрд рублей, +23,9% год к году. В упаковках рынок стагнировал: 409,2 млн
+        упаковок и -0,4%. Это означает борьбу за ценность, доверие и повторную покупку, а не просто за наличие товара.
+      </p>
+      <div class="dash2">
+        <div class="chartcard">
+          <h3>Российский рынок БАД: деньги vs упаковки</h3>
+          <div class="cap">2025 год, данные DSM Group в открытых публикациях</div>
+          <div class="cv"><canvas id="marketChart"></canvas></div>
+        </div>
+        <div class="chartcard">
+          <h3>Каналы и онлайн-поведение</h3>
+          <div class="cap">аптеки остаются основным каналом; онлайн в фармрознице уже около трети</div>
+          <div class="cv"><canvas id="channelChart"></canvas></div>
+        </div>
+      </div>
+      <div class="note"><b>Что это значит для UltraBalance:</b> рынок не нужно создавать с нуля. Нужно перехватывать
+        внимание в момент сравнения: «какую Омегу выбрать», «как пить магний», «чем D3 отличается», «что взять для кожи
+        и волос». Это не баннерная задача, а задача регулярных объяснений. Числа в этом блоке подтверждены открытыми
+        источниками; прогнозные графики ниже помечены как оценочная модель.</div>
+    </section>
+
+    <section class="section">
+      <div class="eyebrow">Шаг 3 · почему обычные блогеры сложны</div>
+      <h2>Инфлюенсерская механика подходит категории, но живые блогеры плохо масштабируются и плохо контролируются.</h2>
+      <div class="vs">
+        <div class="vscol">
+          <h3>Живой блогер</h3>
+          <div class="vli"><span>•</span><span>Гонорар за каждый пост, съемки, монтаж и пересогласования.</span></div>
+          <div class="vli"><span>•</span><span>Сроки зависят от графика человека, состояния и внешних
+              обстоятельств.</span></div>
+          <div class="vli"><span>•</span><span>Риск неверной формулировки: «лечит», «гарантирует», «заменяет
+              врача».</span></div>
+          <div class="vli"><span>•</span><span>Один блогер не закрывает все сегменты: спорт, beauty, 35+, родители, сон,
+              стресс.</span></div>
+        </div>
+        <div class="vscol new">
+          <h3>AI-инфлюенсер</h3>
+          <div class="vli"><span>•</span><span>Персонаж создается один раз и дальше масштабируется на серии
+              роликов.</span></div>
+          <div class="vli"><span>•</span><span>Сценарии выпускаются под сезон, акции, новинки и конкретные карточки
+              товара.</span></div>
+          <div class="vli"><span>•</span><span>Claims-control встроен в процесс: БАД не является лекарством, без
+              обещаний лечения.</span></div>
+          <div class="vli"><span>•</span><span>Можно вести несколько лиц под разные аудитории без переговоров с каждым
+              автором.</span></div>
+        </div>
+      </div>
+      <div class="dash2" style="margin-top:16px">
+        <div class="chartcard">
+          <h3>Экономика контента</h3>
+          <div class="cap">оценочная модель: стоимость единицы контента зависит от объема и продакшена</div>
+          <div class="cv"><canvas id="economyChart"></canvas></div>
+        </div>
+        <div class="chartcard">
+          <h3>Сколько контента можно выпускать</h3>
+          <div class="cap">оценочная модель для пилота, не рыночная статистика</div>
+          <div class="cv"><canvas id="volumeChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="videos">
+      <div class="avatar-stage">
+        <div class="eyebrow">Видео · первые AI-блогеры</div>
+        <h2>Вот как формат может выглядеть в телефоне клиента UltraBalance.</h2>
+        <p class="lead">Видео скопированы из референса и подключены абсолютными ссылками с домена fito.roky.video. Для
+          финального проекта меняются сценарии, упаковка в кадре, CTA и персонажи под UltraBalance.</p>
+        <div class="phone-grid">
+          <div class="phone">
+            <div class="screen">
+              <video src="https://fito.roky.video/fito-ai-video-1.mp4"
+                poster="https://fito.roky.video/fito-ai-video-1-poster.jpg" autoplay muted loop playsinline></video>
+              <div class="tagline"><span>Health</span><span>AI-блогер</span></div>
+            </div>
+            <div class="phone-caption"><b>Иммунитет и витамин D</b><span>Короткие объяснения: сезонность, анализы,
+                осторожные формулировки, CTA в карточку Vitamin D3.</span></div>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <video src="https://fito.roky.video/fito-ai-video-2.mp4"
+                poster="https://fito.roky.video/fito-ai-video-2-poster.jpg" autoplay muted loop playsinline></video>
+              <div class="tagline"><span>Beauty</span><span>AI-блогер</span></div>
+            </div>
+            <div class="phone-caption"><b>Кожа, волосы и коллаген</b><span>Beauty-рубрики без обещаний лечения: рутина,
+                состав, курс, сравнение форматов и подборки.</span></div>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <video src="https://fito.roky.video/fito-ai-video-3.mp4"
+                poster="https://fito.roky.video/fito-ai-video-3-poster.jpg" autoplay muted loop playsinline></video>
+              <div class="tagline"><span>Sport</span><span>AI-блогер</span></div>
+            </div>
+            <div class="phone-caption"><b>Спорт, магний и восстановление</b><span>Сценарии для тренировок, сна, стресса
+                и восстановления с привязкой к Magnesium & B6 и ZMA.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="plan">
+      <div class="eyebrow">Шаг 4 · первая серия</div>
+      <h2>От каталога до роликов: 4 шага на первый месяц.</h2>
+      <p class="lead">Пилот строится вокруг товаров, которые уже понятны рынку, но требуют доверительного объяснения:
+        Omega-3, D3, магний, коллаген, skin/hair/nails, иммунитет, спорт и антистресс.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div><b>Матрица категорий</b>
+          <p>10-15 направлений, список допустимых формулировок, запреты и дисклеймеры для БАД.</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div><b>AI-лица</b>
+          <p>Health, beauty, sport и 35+ персонажи под разные сегменты аудитории.</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div><b>Контент-сетка</b>
+          <p>Reels/Shorts, сторис, карточки, промокоды, UTM и переходы в конкретные товары.</p>
+        </div>
+        <div class="step">
+          <div class="num">4</div><b>Отчет</b>
+          <p>Сравнение тем, лиц и CTA по просмотрам, кликам, корзинам и повторным покупкам.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="eyebrow">Шаг 5 · бенчмарк</div>
+      <h2>Почему берем инфлюенсерскую механику, а не баннерную.</h2>
+      <p class="lead">В нише БАД аудитория покупает после объяснения, сравнения и ощущения безопасности. Поэтому крупные
+        игроки используют сеть блогеров, промокоды и регулярные рекомендации, а не только прямую рекламу бренда.</p>
+      <div class="case">
+        <div class="case-head">
+          <div class="case-logo">iHerb x инфлюенс-маркетинг</div>
+          <div class="case-tag">мировой бенчмарк категории</div>
+        </div>
+        <div class="case-grid">
+          <div class="case-m">
+            <div class="cn">8 500+</div>
+            <div class="cl">блогеров в публичном кейсе Perfluence</div>
+          </div>
+          <div class="case-m">
+            <div class="cn">744,5 млн</div>
+            <div class="cl">совокупный охват аудитории</div>
+          </div>
+          <div class="case-m">
+            <div class="cn">~1 млн</div>
+            <div class="cl">переходов по ссылкам за 8 месяцев</div>
+          </div>
+          <div class="case-m">
+            <div class="cn">14%</div>
+            <div class="cl">ДРР в кейсе как ориентир эффективности</div>
+          </div>
+        </div>
+      </div>
+      <div class="dash2" style="margin-top:16px">
+        <div class="chartcard">
+          <h3>Кому доверяют при выборе БАД</h3>
+          <div class="cap">оценочная модель для контент-стратегии, не данные опроса</div>
+          <div class="cv"><canvas id="trustChart"></canvas></div>
+        </div>
+        <div class="chartcard">
+          <h3>Эффект сети лиц</h3>
+          <div class="cap">оценочная модель: относительный охват сети лиц</div>
+          <div class="cv"><canvas id="reachChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="offer">
+      <div class="offer">
+        <div class="eyebrow">Предложение</div>
+        <h2>Сделать первую серию AI-инфлюенсеров для UltraBalance.</h2>
+        <p class="lead">У бренда уже есть ассортимент, цены, отзывы, акции и понятные категории. Нужно добавить
+          управляемый контент-слой: лицо, рубрика, безопасная формулировка, товарная полка и CTA в ultrabalance.ru.</p>
+        <div class="bigm">
+          <div>
+            <div class="n">-70%</div>
+            <div class="l">к стоимости единицы контента против живых блогеров, оценочно</div>
+          </div>
+          <div>
+            <div class="n">x10</div>
+            <div class="l">больше единиц контента в месяц при той же операционной нагрузке</div>
+          </div>
+          <div>
+            <div class="n">0</div>
+            <div class="l">рисков самодеятельных медицинских обещаний от автора</div>
+          </div>
+        </div>
+        <div class="chartcard" style="margin-bottom:24px">
+          <h3>План работы · 90 дней</h3>
+          <div class="cap">от персонажей до стабильной контент-воронки</div>
+          <div class="cv"><canvas id="roadmapChart"></canvas></div>
+        </div>
+        <a class="cta" href="tel:+375445556636" target="_blank" rel="noopener">Номер телефона для связи: +375 44 555-66-36</a>
+        <a class="cta" href="https://t.me" target="_blank" rel="noopener">Написать в Telegram</a>
+      </div>
+    </section>
+
+    <footer class="foot">
+
+      <div class="sources">
+        <br>
+
+      </div>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    const GOLD = '#ad8957';
+    const GOLD2 = '#d7b36b';
+    const SOFT = '#f7eac0';
+    const GREY = '#5e5e5e';
+    const GREEN = '#767060';
+    const RED = '#f52525';
+    Chart.defaults.font.family = 'Ubuntu, Inter, Arial, sans-serif';
+    Chart.defaults.color = '#6f6b63';
+    const noLegend = { plugins: { legend: { display: false } }, responsive: true, maintainAspectRatio: false };
+
+    new Chart(document.getElementById('marketChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Деньги, млрд ₽', 'Рост денег, %', 'Упаковки, млн', 'Рост упаковок, %'],
+        datasets: [{ data: [182.5, 23.9, 409.2, -0.4], backgroundColor: [GOLD, GOLD2, GREY, RED], borderRadius: 6 }]
+      },
+      options: { ...noLegend, scales: { y: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById('channelChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Аптечный канал', 'Остальные каналы, включая маркетплейсы'],
+        datasets: [{ data: [65, 35], backgroundColor: [GOLD, SOFT], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '64%', plugins: { legend: { position: 'bottom' } } }
+    });
+
+    new Chart(document.getElementById('economyChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Живой блогер', 'AI-инфлюенсер'],
+        datasets: [{ data: [100, 30], backgroundColor: [GREY, GOLD], borderRadius: 6 }]
+      },
+      options: { ...noLegend, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+    });
+
+    new Chart(document.getElementById('volumeChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Живой блогер', 'AI-сетка'],
+        datasets: [{ data: [4, 40], backgroundColor: [GREY, GOLD], borderRadius: 6 }]
+      },
+      options: { ...noLegend, scales: { y: { beginAtZero: true, ticks: { callback: v => v + ' шт' } } } }
+    });
+
+    new Chart(document.getElementById('trustChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Эксперт/блогер', 'Отзывы покупателей', 'Карточка товара', 'Баннер'],
+        datasets: [{ data: [82, 74, 58, 24], backgroundColor: [GOLD, GOLD2, GREEN, '#e0e0e0'], borderRadius: 6 }]
+      },
+      options: { indexAxis: 'y', ...noLegend, scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } } }
+    });
+
+    new Chart(document.getElementById('reachChart'), {
+      type: 'bar',
+      data: {
+        labels: ['1 лицо', '5 лиц', '15 лиц'],
+        datasets: [{ data: [1, 5, 15], backgroundColor: ['#e0e0e0', GOLD2, GOLD], borderRadius: 6 }]
+      },
+      options: { ...noLegend, scales: { y: { beginAtZero: true, ticks: { callback: v => 'x' + v } } } }
+    });
+
+    new Chart(document.getElementById('roadmapChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Матрица', 'Персонажи', 'Первые ролики', 'Промо', 'Отчет'],
+        datasets: [{ data: [[0, 2], [1, 4], [3, 7], [6, 11], [9, 12]], backgroundColor: [SOFT, GOLD2, GOLD, '#5e5e5e', '#303030'], borderRadius: 6 }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { min: 0, max: 12, ticks: { callback: v => 'нед. ' + v }, grid: { color: 'rgba(255,255,255,.12)' } },
+          y: { grid: { display: false }, ticks: { color: '#efe1c4' } }
+        },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'недели ' + c.raw[0] + '-' + c.raw[1] } } }
+      }
+    });
+  </script>
+</body>
+
+</html>

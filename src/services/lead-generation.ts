@@ -26,15 +26,15 @@ export class LeadGenerationError extends Error {
 }
 
 const DEFAULT_CONFIG: LeadGeneratorConfig = {
-  maxCandidates: 100,
-  maxContactPages: 8,
+  maxCandidates: 250,
+  maxContactPages: 10,
   contactPagesParallelism: 4,
-  siteAnalysisParallelism: 6,
-  requestTimeoutMs: 10000,
+  siteAnalysisParallelism: 8,
+  requestTimeoutMs: 12000,
 };
 
 // ======================= Константы =======================
-const SEARCH_ENDPOINT = "https://www.bing.com/search";
+const SEARCH_ENDPOINT = "https://www.google.com/search";
 const DUCK_SEARCH_ENDPOINT = "https://html.duckduckgo.com/html/";
 const TELEGRAM_HANDLE = /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/;
 const CONTACT_HINT = /contact|contacts|kontakt|kontakty|контакт|связаться|about|о-компании|о-нас|team|команда|руководство|management|leadership|реквизит|service|услуг|product|продукт|catalog|каталог|direction|направлен/i;
@@ -105,6 +105,11 @@ function unwrapSearchUrl(href: string): string | undefined {
     const duckTarget = url.searchParams.get("uddg");
     if (duckTarget) return normalizeCandidateUrl(decodeURIComponent(duckTarget));
 
+    const googleTarget = url.hostname.endsWith("google.com") && url.pathname === "/url"
+      ? url.searchParams.get("q") ?? url.searchParams.get("url")
+      : undefined;
+    if (googleTarget) return normalizeCandidateUrl(googleTarget);
+
     const bingTarget = url.hostname.endsWith("bing.com") ? url.searchParams.get("u") : undefined;
     if (bingTarget?.startsWith("a1")) {
       try {
@@ -124,7 +129,7 @@ export function parseSearchResults(html: string): string[] {
   const $ = load(html);
   const urls: string[] = [];
 
-  $("li.b_algo h2 a, a.result__a, a[data-testid='result-title-a']").each((_, element) => {
+  $("li.b_algo h2 a, a.result__a, a[data-testid='result-title-a'], a:has(h3), a[href^='/url?']").each((_, element) => {
     const href = $(element).attr("href");
     if (!href) return;
     const candidate = unwrapSearchUrl(href);
@@ -164,8 +169,8 @@ function keywordStem(value: string): string {
   return normalized.length > 6 ? normalized.slice(0, -3) : normalized;
 }
 
-function criteriaKeywords(criteria: LeadCriteria): string[] {
-  return [...new Set(`${criteria.whoToFind} ${criteria.whoCanBuy}`
+function keywordsFrom(value: string): string[] {
+  return [...new Set(value
     .split(/[^\p{L}\d]+/u)
     .map(keywordStem)
     .filter(w => w.length >= 4 && !KEYWORD_STOP.has(w))
@@ -178,11 +183,16 @@ export function scoreCompany(text: string, criteria: LeadCriteria, regionMatched
   matchedKeywords: string[];
 } {
   const normalized = text.toLocaleLowerCase("ru").replace(/ё/g, "е");
-  const keywords = criteriaKeywords(criteria);
-  const matchedKeywords = keywords.filter(kw => normalized.includes(kw));
-  const ratio = keywords.length > 0 ? matchedKeywords.length / keywords.length : 0.5;
+  const targetKeywords = keywordsFrom(criteria.whoToFind);
+  const buyerKeywords = keywordsFrom(criteria.whoCanBuy);
+  const matchedTarget = targetKeywords.filter(kw => normalized.includes(kw));
+  const matchedBuyer = buyerKeywords.filter(kw => normalized.includes(kw));
+  const targetRatio = targetKeywords.length > 0 ? matchedTarget.length / targetKeywords.length : 0.5;
+  const buyerRatio = buyerKeywords.length > 0 ? matchedBuyer.length / buyerKeywords.length : targetRatio;
+  const ratio = targetRatio * 0.8 + buyerRatio * 0.2;
+  const matchedKeywords = [...new Set([...matchedTarget, ...matchedBuyer])];
   const score = Math.min(100, Math.round(15 + ratio * 65 + (regionMatched ? 15 : 0) + (contacts > 0 ? 5 : 0)));
-  const matchKind = ratio >= 0.6 && regionMatched ? "exact" : ratio >= 0.28 ? "partial" : "similar";
+  const matchKind = targetRatio >= 0.6 && regionMatched ? "exact" : ratio >= 0.28 ? "partial" : "similar";
   return { score, matchKind, matchedKeywords };
 }
 
@@ -292,6 +302,15 @@ function normalizePhone(value: string): string {
   return value.replace(/[^\d+]/g, "").replace(/^8(?=\d{10}$)/, "+7");
 }
 
+function isLikelyPhoneText(rawValue: string, normalized: string): boolean {
+  const digits = normalized.replace(/\D/g, "");
+  if (rawValue.trim().startsWith("+")) {
+    if (digits.startsWith("7")) return /^7[3489]\d{9}$/.test(digits);
+    return digits.length >= 11 && digits.length <= 15;
+  }
+  return /^7[3489]\d{9}$/.test(digits) && rawValue.trim().startsWith("8");
+}
+
 function extractCompanyContacts(html: string, sourceUrl: string): CompanyContact[] {
   const $ = load(html);
   const contacts: CompanyContact[] = [];
@@ -326,7 +345,9 @@ function extractCompanyContacts(html: string, sourceUrl: string): CompanyContact
   }
   for (const rawPhone of text.match(PHONE_PATTERN) ?? []) {
     const val = normalizePhone(rawPhone);
-    if (val.length >= 10 && val.length <= 16) add({ kind: "phone", value: val, role: inferContactRole(text.slice(Math.max(0, text.indexOf(rawPhone) - 100), text.indexOf(rawPhone) + rawPhone.length + 100)), sourceUrl });
+    if (isLikelyPhoneText(rawPhone, val)) {
+      add({ kind: "phone", value: val, role: inferContactRole(text.slice(Math.max(0, text.indexOf(rawPhone) - 100), text.indexOf(rawPhone) + rawPhone.length + 100)), sourceUrl });
+    }
   }
 
   $("li, p, td, address, [class*='team'], [class*='person'], [class*='staff']").each((_, el) => {
@@ -370,6 +391,49 @@ function detectRegion(pageText: string, criteria: LeadCriteria, website?: string
   return found.length > 0 ? found.join(", ") : undefined;
 }
 
+const COUNTRY_RULES = [
+  { aliases: ["россия", "российская федерация", "russia"], tlds: [".ru", ".рф", ".su"], googleCountry: "ru" },
+  { aliases: ["беларусь", "белоруссия", "belarus"], tlds: [".by"], googleCountry: "by" },
+  { aliases: ["казахстан", "kazakhstan"], tlds: [".kz"], googleCountry: "kz" },
+  { aliases: ["узбекистан", "uzbekistan"], tlds: [".uz"], googleCountry: "uz" },
+  { aliases: ["украина", "ukraine"], tlds: [".ua"], googleCountry: "ua" },
+  { aliases: ["армения", "armenia"], tlds: [".am"], googleCountry: "am" },
+  { aliases: ["грузия", "georgia"], tlds: [".ge"], googleCountry: "ge" },
+  { aliases: ["кыргызстан", "киргизия", "kyrgyzstan"], tlds: [".kg"], googleCountry: "kg" },
+] as const;
+
+function countrySearchHint(criteria: LeadCriteria): { googleCountry?: string; siteOperator?: string } {
+  const requestedText = criteria.whereToSearch.toLocaleLowerCase("ru");
+  const rule = COUNTRY_RULES.find(item => item.aliases.some(alias => requestedText.includes(alias)));
+  if (!rule) return {};
+  return {
+    googleCountry: rule.googleCountry,
+    siteOperator: `(${rule.tlds.map(tld => `site:${tld}`).join(" OR ")})`,
+  };
+}
+
+function countryDomainMatch(criteria: LeadCriteria, pageText: string, website: string): {
+  requested: boolean;
+  matched: boolean;
+  conflicting: boolean;
+} {
+  const requestedText = criteria.whereToSearch.toLocaleLowerCase("ru");
+  const rule = COUNTRY_RULES.find(item => item.aliases.some(alias => requestedText.includes(alias)));
+  if (!rule) return { requested: false, matched: true, conflicting: false };
+
+  const hostname = new URL(website).hostname.toLocaleLowerCase("ru");
+  const normalizedPage = pageText.toLocaleLowerCase("ru");
+  const domainMatched = rule.tlds.some(tld => hostname.endsWith(tld));
+  const textMatched = rule.aliases.some(alias => normalizedPage.includes(alias));
+  const knownCountryTlds = COUNTRY_RULES.flatMap(item => [...item.tlds]);
+  const finalLabel = hostname.split(".").at(-1) ?? "";
+  const hasDifferentCountryTld = finalLabel.length === 2
+    && !rule.tlds.some(tld => tld === `.${finalLabel}`);
+  const conflicting = (knownCountryTlds.some(tld => hostname.endsWith(tld)) || hasDifferentCountryTld)
+    && !domainMatched;
+  return { requested: true, matched: domainMatched || textMatched, conflicting };
+}
+
 function exclusionPhrases(value: string): string[] {
   if (/^(?:-|нет|без исключений)$/i.test(value.trim())) return [];
   return value
@@ -405,30 +469,62 @@ export class LeadGenerator {
     const explicitUrls = extractExplicitUrls(criteria.whereToSearch);
     if (explicitUrls.length > 0) return explicitUrls.slice(0, this.config.maxCandidates);
 
-    const queries = [
+    const countryHint = countrySearchHint(criteria);
+    const queries = [...new Set([
       `${criteria.whoToFind} ${criteria.whereToSearch} компания официальный сайт контакты`,
       `"${criteria.whoToFind}" ${criteria.whereToSearch} официальный сайт`,
-      `${criteria.whoToFind} ${criteria.whereToSearch} каталог компаний`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} услуги каталог официальный сайт`,
       `${criteria.whoToFind} ${criteria.whereToSearch} контакты руководство`,
       `${criteria.whoCanBuy} ${criteria.whereToSearch} официальный сайт`,
-      `${criteria.whoToFind} похожие компании ${criteria.whereToSearch}`,
-      `${criteria.offer} потенциальные клиенты ${criteria.whoToFind} ${criteria.whereToSearch}`,
-      `${criteria.whoToFind} поставщики производители дистрибьюторы ${criteria.whereToSearch}`,
-    ];
+      `intitle:"${criteria.whoToFind}" ${criteria.whereToSearch} контакты`,
+      `inurl:contact ${criteria.whoToFind} ${criteria.whereToSearch}`,
+      `inurl:about ${criteria.whoToFind} ${criteria.whereToSearch}`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} реквизиты руководство`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} филиалы направления деятельности`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} организации предприятия`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} сеть компании адреса`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} список компаний официальный сайт`,
+      `${criteria.whoToFind} ${criteria.whereToSearch} производители поставщики`,
+      countryHint.siteOperator
+        ? `${countryHint.siteOperator} ${criteria.whoToFind} официальный сайт`
+        : `${criteria.whoToFind} ${criteria.whereToSearch} официальный домен`,
+    ])];
 
-    const pages = await Promise.allSettled(
-      queries.map((q, i) => {
-        const endpoint = i % 2 === 0 ? SEARCH_ENDPOINT : DUCK_SEARCH_ENDPOINT;
-        const url = new URL(endpoint);
+    const googleRequests = queries.flatMap(q => [0, 10, 20].map(start => {
+      const url = new URL(SEARCH_ENDPOINT);
+      url.searchParams.set("q", q);
+      url.searchParams.set("num", "10");
+      url.searchParams.set("start", String(start));
+      url.searchParams.set("filter", "0");
+      url.searchParams.set("pws", "0");
+      url.searchParams.set("hl", "ru");
+      if (countryHint.googleCountry) url.searchParams.set("gl", countryHint.googleCountry);
+      return this.fetchWithTimeout(url.toString()).then(r => r.html);
+    }));
+    const googlePages = await Promise.allSettled(googleRequests);
+    const googleHtmls = googlePages
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
+      .map(result => result.value);
+    let discovered = [...new Set(googleHtmls.flatMap(parseSearchResults))];
+
+    // Google can return an HTTP 200 consent/CAPTCHA page without search results.
+    // Treat that as unavailable and use the fallback instead of returning an empty report.
+    if (discovered.length === 0) {
+      const fallbackPages = await Promise.allSettled(queries.slice(0, 10).flatMap(q => [0, 30].map(offset => {
+        const url = new URL(DUCK_SEARCH_ENDPOINT);
         url.searchParams.set("q", q);
+        if (offset > 0) url.searchParams.set("s", String(offset));
         return this.fetchWithTimeout(url.toString()).then(r => r.html);
-      })
-    );
+      })));
+      const fallbackHtmls = fallbackPages
+        .filter((result): result is PromiseFulfilledResult<string> => result.status === "fulfilled")
+        .map(result => result.value);
+      discovered = [...new Set(fallbackHtmls.flatMap(parseSearchResults))];
+    }
 
-    const htmls = pages.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map(r => r.value);
-    if (htmls.length === 0) throw new LeadGenerationError("Поиск недоступен. Укажите конкретные сайты или повторите позже.");
-
-    const discovered = [...new Set(htmls.flatMap(parseSearchResults))];
+    if (discovered.length === 0) {
+      throw new LeadGenerationError("Поиск не вернул сайты компаний. Укажите конкретные сайты или повторите позже.");
+    }
     const byHost = new Map<string, string>();
     for (const c of discovered) {
       try {
@@ -447,8 +543,11 @@ export class LeadGenerator {
     const pageText = cleanText($("body").text(), 200_000);
     if (shouldExclude(pageText, criteria)) return undefined;
 
+    const country = countryDomainMatch(criteria, pageText, page.finalUrl);
+    if (country.conflicting) return undefined;
+
     let region = detectRegion(pageText, criteria, page.finalUrl);
-    const analyzedTexts = [pageText];
+    const analyzedTexts = [new URL(page.finalUrl).hostname, $("title").text(), pageText];
 
     const contacts = extractTelegramContacts(page.html, page.finalUrl);
     const companyContacts = extractCompanyContacts(page.html, page.finalUrl);
@@ -480,6 +579,8 @@ export class LeadGenerator {
     );
 
     const ranking = scoreCompany(analyzedTexts.join(" "), criteria, regionTerms(criteria).length === 0 || Boolean(region), mergedContacts.length);
+    if (ranking.matchKind === "similar") return undefined;
+    if (country.requested && !country.matched && !region) return undefined;
 
     const description = cleanText(
       $("meta[name='description']").attr("content") ??
@@ -520,7 +621,7 @@ export class LeadGenerator {
     const warnings: string[] = [];
     settled.forEach((res, idx) => {
       if (res.status === "fulfilled") {
-        if (res.value) leads.push(res.value);
+        if (res.value && res.value.matchKind !== "similar") leads.push(res.value);
       } else {
         const host = (() => { try { return new URL(candidates[idx] ?? "").hostname } catch { return "неизвестный сайт" } })();
         warnings.push(`${host}: сайт не удалось проанализировать`);
@@ -590,34 +691,43 @@ export function formatLeadCsv(result: LeadGenerationResult): string {
   return `\uFEFF${["Название компании,Сайт,Регион,Тип совпадения,Релевантность %,Управляющие люди владельцы менеджеры,Контакты", ...rows].join("\r\n")}`;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[character] ?? character);
+}
+
 /**
  * Возвращает HTML-строку с таблицей лидов.
  * При сохранении в файл с расширением .doc Microsoft Word откроет его как документ.
  */
 export function formatLeadHtml(result: LeadGenerationResult): string {
-  const rows = result.leads.map(lead => {
+  const leads = result.leads.filter(lead => lead.matchKind !== "similar");
+  const rows = leads.map(lead => {
     const contacts = lead.contacts ?? [];
     const people = contacts.filter(c => c.kind === "person").map(c => `${c.value} — ${ROLE_LABELS[c.role]}`).join("; ");
     const comm = contacts.filter(c => c.kind !== "person").map(c => `${c.value} — ${ROLE_LABELS[c.role]}`).join("; ");
     const tg = lead.telegramContacts.map(tc => tc.handle).join("; ");
     return `<tr>
-      <td>${oneLine(lead.companyName)}</td>
-      <td><a href="${lead.website}">${lead.website}</a></td>
-      <td>${lead.region ?? ""}</td>
-      <td>${lead.matchKind ?? ""}</td>
+      <td>${escapeHtml(oneLine(lead.companyName))}</td>
+      <td><a href="${escapeHtml(lead.website)}">${escapeHtml(lead.website)}</a></td>
+      <td>${escapeHtml(lead.region ?? "")}</td>
+      <td>${escapeHtml(lead.matchKind ?? "")}</td>
       <td>${lead.relevanceScore ?? ""}%</td>
-      <td>${people || "—"}</td>
-      <td>${comm || tg || "—"}</td>
+      <td>${escapeHtml(people || "—")}</td>
+      <td>${escapeHtml(comm || tg || "—")}</td>
     </tr>`;
   }).join("\n");
 
-  return `<!DOCTYPE html>
-<html>
+  return `﻿<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>Лиды</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; }
+    @page { size: A4 landscape; margin: 1.5cm; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #999; padding: 6px; text-align: left; vertical-align: top; }
     th { background: #eee; }
@@ -626,6 +736,7 @@ export function formatLeadHtml(result: LeadGenerationResult): string {
 <body>
   <h1>Результат поиска лидов</h1>
   <p>Проанализировано сайтов: ${result.analyzedSites}</p>
+  <p>В документ включены только точные и частичные совпадения. Похожие компании исключены.</p>
   <table>
     <thead>
       <tr>

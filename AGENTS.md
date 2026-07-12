@@ -34,3 +34,6 @@ Existing history uses short Conventional Commit-style subjects such as `feat: ..
 ## Security & Configuration Tips
 
 Never place bot tokens or credentials in source control. Public-site fetching must remain limited to `http`/`https` and retain private-network, redirect, timeout, and content-size checks. Treat scraped contacts and generated presentations as untrusted output requiring review before external use.
+
+
+##

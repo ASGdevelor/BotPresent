@@ -26,6 +26,14 @@ export interface MessageHistoryOptions {
   retentionDays?: number;
 }
 
+export interface PresentationHistoryResult {
+  id: string;
+  companyName: string;
+  website: string;
+  sources: string[];
+  researchStatus: "verified" | "not-found";
+}
+
 export class MessageHistory {
   private readonly database: Database;
   private readonly maxMessagesPerUser: number;
@@ -90,6 +98,20 @@ export class MessageHistory {
     });
 
     transaction();
+  }
+
+  /** Сохраняет воспроизводимый итог генерации без зависимости сервиса истории от presentation.ts. */
+  recordPresentationResult(chatId: number, userId: number, result: PresentationHistoryResult): void {
+    const sources = [...new Set(result.sources)].slice(0, 8);
+    const research = result.researchStatus === "verified"
+      ? "проверяемые отраслевые данные найдены"
+      : "отраслевые числа не найдены, использован явный пустой fallback";
+    this.record(chatId, userId, "system", [
+      `Презентация ${result.id} создана для ${result.companyName}.`,
+      `Сайт: ${result.website}.`,
+      `Исследование: ${research}.`,
+      `Источники: ${sources.length > 0 ? sources.join(", ") : "не указаны"}.`,
+    ].join(" "));
   }
 
   list(chatId: number, userId: number, limit = 100): HistoryMessage[] {

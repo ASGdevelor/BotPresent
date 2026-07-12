@@ -19,5 +19,9 @@ describe("public web protection", () => {
     expect(url.username).toBe("");
     expect(url.password).toBe("");
   });
-});
 
+  test("exposes a stable DNS error code", () => {
+    const error = new PublicWebError("dns", { code: "DNS_LOOKUP" });
+    expect(error.code).toBe("DNS_LOOKUP");
+  });
+});
