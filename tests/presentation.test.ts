@@ -2,12 +2,17 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  buildResearchQueries,
   extractWebsiteIdentity,
+  groupComparableIndustryFacts,
   isResearchPageRelevant,
   isRelatedCompanyPage,
   parseBingWebsiteSnapshot,
   parseResearchResultUrls,
+  parseVerifiedNumericFacts,
   renderPresentationTemplate,
+  sourceQualityScore,
+  type IndustryFact,
   type WebsiteFacts,
 } from "../src/services/presentation";
 
@@ -28,12 +33,69 @@ const facts: WebsiteFacts = {
     label: "Объём отрасли составил 12,5 млн",
     value: 12.5,
     displayValue: "12,5 млн",
+    unit: "млн",
     sourceUrl: "https://ru.wikipedia.org/wiki/Example",
     sourceTitle: "Example",
   }],
 };
 
 describe("presentation template", () => {
+  test("builds several focused research queries", () => {
+    const queries = buildResearchQueries("фармацевтический рынок", "Apteka.ru");
+    expect(queries).toHaveLength(5);
+    expect(queries.join(" ")).toContain("2025 2026");
+    expect(queries.join(" ")).toContain("Apteka.ru");
+    expect(queries.join(" ")).toContain("site:dsm.ru");
+  });
+
+  test("extracts year, unit and quality from numeric facts", () => {
+    const parsed = parseVerifiedNumericFacts(`
+      <title>Исследование фармацевтического рынка</title>
+      <p>В 2025 году доля онлайн-продаж достигла 42,5 % от общего объёма рынка.</p>
+      <p>Объём фармацевтического рынка в 2024 году составил 18,7 млрд рублей.</p>
+    `, "https://rosstat.gov.ru/report");
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]).toMatchObject({ value: 42.5, unit: "%", year: 2025 });
+    expect(parsed[1]).toMatchObject({ value: 18.7, unit: "млрд ₽", year: 2024 });
+    expect(parsed[0]!.qualityScore).toBeGreaterThan(40);
+  });
+
+  test("rejects ownership percentages that are not market indicators", () => {
+    const parsed = parseVerifiedNumericFacts(`
+      <title>Еаптека</title>
+      <p>В 2025 году инвесторы консолидировали 100 % акций компании.</p>
+      <p>В 2025 году доля онлайн-продаж на фармацевтическом рынке достигла 21 %.</p>
+    `, "https://ru.wikipedia.org/wiki/Test");
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]?.value).toBe(21);
+  });
+
+  test("rejects one competitor revenue from an industry chart", () => {
+    const parsed = parseVerifiedNumericFacts(`
+      <title>Еаптека</title>
+      <p>В 2020 году выручка ООО «Еаптека» составила 5,1 млрд рублей.</p>
+      <p>Объём российского фармацевтического рынка в 2025 году достиг 3,2 млрд рублей.</p>
+    `, "https://ru.wikipedia.org/wiki/Test");
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]?.value).toBe(3.2);
+  });
+
+  test("never mixes percentages and money in one chart group", () => {
+    const comparable: IndustryFact[] = [
+      { label: "Доля A", value: 42, displayValue: "42 %", unit: "%", sourceUrl: "https://a.example", sourceTitle: "A" },
+      { label: "Доля B", value: 51, displayValue: "51 %", unit: "%", sourceUrl: "https://b.example", sourceTitle: "B" },
+      { label: "Объём", value: 18, displayValue: "18 млрд ₽", unit: "млрд ₽", sourceUrl: "https://c.example", sourceTitle: "C" },
+    ];
+    const groups = groupComparableIndustryFacts(comparable);
+    expect(groups[0]!.map((fact) => fact.unit)).toEqual(["%", "%"]);
+    expect(groups[1]!.map((fact) => fact.unit)).toEqual(["млрд ₽"]);
+  });
+
+  test("prefers official statistics over encyclopedias and social media", () => {
+    expect(sourceQualityScore("https://rosstat.gov.ru/report")).toBeGreaterThan(sourceQualityScore("https://ru.wikipedia.org/wiki/Test"));
+    expect(sourceQualityScore("https://ru.wikipedia.org/wiki/Test")).toBeGreaterThan(sourceQualityScore("https://vk.com/test"));
+  });
+
   test("extracts public research pages from search results", () => {
     const html = `
       <a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fresearch.example%2Freport">Report</a>
@@ -42,6 +104,10 @@ describe("presentation template", () => {
     expect(parseResearchResultUrls(html, "https://html.duckduckgo.com/html/")).toEqual([
       "https://research.example/report",
     ]);
+    expect(parseResearchResultUrls(
+      '<a href="/url?q=https%3A%2F%2Frosstat.gov.ru%2Fmarket"><h3>Official report</h3></a>',
+      "https://www.google.com/search?q=test",
+    )).toEqual(["https://rosstat.gov.ru/market"]);
   });
 
   test("builds a website snapshot from exact-domain Bing results after DNS failure", () => {

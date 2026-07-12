@@ -30,6 +30,9 @@ export interface IndustryFact {
   label: string;
   value: number;
   displayValue: string;
+  unit?: string;
+  year?: number;
+  qualityScore?: number;
   sourceUrl: string;
   sourceTitle: string;
 }
@@ -405,27 +408,62 @@ function inferIndustry($: ReturnType<typeof load>, headings: string[]): string {
   return inferred.find(([pattern]) => pattern.test(corpus))?.[1] ?? "отрасль компании";
 }
 
-function parseVerifiedNumericFacts(html: string, sourceUrl: string): IndustryFact[] {
+function normalizeFactUnit(rawUnit: string, currency: string): string {
+  const unit = rawUnit.toLocaleLowerCase("ru").replace(/\.$/, "");
+  const money = /₽|руб/i.test(currency);
+  if (unit === "%" || /процент/.test(unit)) return "%";
+  if (/млрд|миллиард/.test(unit)) return money ? "млрд ₽" : "млрд";
+  if (/млн|миллион/.test(unit)) return money ? "млн ₽" : "млн";
+  if (/тыс|тысяч/.test(unit)) return money ? "тыс ₽" : "тыс";
+  return unit;
+}
+
+export function sourceQualityScore(sourceUrl: string): number {
+  const hostname = new URL(sourceUrl).hostname.replace(/^www\./, "").toLowerCase();
+  if (/\.gov\.ru$|^rosstat\.gov\.ru$|^cbr\.ru$|^minzdrav\.gov\.ru$/.test(hostname)) return 45;
+  if (/\.edu$|\.edu\.ru$|\.ac\.|eec\.eaeunion\.org$/.test(hostname)) return 38;
+  if (/dsm\.ru$|rbc\.ru$|vedomosti\.ru$|kommersant\.ru$|tadviser\.ru$/.test(hostname)) return 30;
+  if (/wikipedia\.org$|wikidata\.org$/.test(hostname)) return 18;
+  if (/youtube|vk\.com$|tiktok|instagram|facebook|pinterest/.test(hostname)) return -30;
+  return 22;
+}
+
+export function parseVerifiedNumericFacts(html: string, sourceUrl: string): IndustryFact[] {
   const page = load(html);
   page("script,style,noscript,svg").remove();
   const title = clean(page("h1").first().text() || page("title").text(), 120);
   const facts: IndustryFact[] = [];
-  page("p,td").each((_, node) => {
+  page("p,td,li").each((_, node) => {
     const sentence = clean(page(node).text(), 300);
-    const match = sentence.match(/(?:^|\s)(\d{1,3}(?:[\s.,]\d{3})*(?:[,.]\d+)?)\s*(%|млрд|млн|тыс\.?|миллионов?|миллиардов?)/i);
-    if (!match) return;
-    const normalized = match[1]?.replace(/\s/g, "").replace(",", ".") ?? "";
-    const value = Number.parseFloat(normalized);
-    if (!Number.isFinite(value)) return;
-    facts.push({
-      label: sentence,
-      value,
-      displayValue: `${match[1]} ${match[2]}`,
-      sourceUrl,
-      sourceTitle: title || new URL(sourceUrl).hostname,
-    });
+    if (sentence.length < 20) return;
+    const marketContext = /рынок|об[ъь][её]м|продаж|выручк|оборот|аудитор|покупател|клиент|потребител|спрос|заказ|посещаем|насчитыва|количеств|число\s+(?:компан|аптек|клиник|магазин)|рост|вырос|снизил|динамик|доля\s+(?:рынка|продаж|онлайн)/i.test(sentence);
+    const ownershipContext = /дол[яю]\s+(?:в\s+)?(?:компани|капитал)|акци[йи]|акционер|консолидирова|владеет|структур[аы]\s+капитала|результат[еы]?\s+сделк|инвестици[йи]\s+в\s+компани/i.test(sentence);
+    const sectorContext = /рынок|отрасл|сегмент|росси[ияй]|по\s+стране|совокупн|общ(?:ий|ая)\s+об[ъь][её]м|насчитыва|количеств|число\s+(?:компан|аптек|клиник|магазин)|доля\s+(?:рынка|продаж|онлайн)/i.test(sentence);
+    const companyFinancialContext = /\b(?:ООО|АО|ПАО|ЗАО)\b|выручка\s+(?:компании|сервис|ООО|АО)|оборот\s+[«"]?[\p{L}\d.-]+[»"]?/iu.test(sentence);
+    if (!marketContext || ownershipContext || (companyFinancialContext && !sectorContext)) return;
+    const pattern = /(?:^|\s)(\d{1,3}(?:[\s.](?:\d{3})(?!\d))*(?:[,.]\d+)?)\s*(%|процент(?:а|ов)?|млрд\.?|млн\.?|тыс\.?|миллионов?|миллиардов?|тысяч(?:а|и)?)\s*(₽|руб(?:лей|ля|\.)?)?/gi;
+    for (const match of sentence.matchAll(pattern)) {
+      const normalized = match[1]?.replace(/[\s.](?=\d{3}(?:\D|$))/g, "").replace(",", ".") ?? "";
+      const value = Number.parseFloat(normalized);
+      if (!Number.isFinite(value) || value < 0) continue;
+      const unit = normalizeFactUnit(match[2] ?? "", match[3] ?? "");
+      const yearMatch = sentence.match(/\b(20(?:1[8-9]|2[0-6]))\b/);
+      const year = yearMatch ? Number(yearMatch[1]) : undefined;
+      const recency = year ? Math.max(0, 14 - (2026 - year) * 3) : 0;
+      const contextScore = Math.min(20, Math.round(sentence.length / 20));
+      facts.push({
+        label: sentence,
+        value,
+        displayValue: `${match[1]} ${unit}`,
+        unit,
+        ...(year ? { year } : {}),
+        qualityScore: sourceQualityScore(sourceUrl) + recency + contextScore,
+        sourceUrl,
+        sourceTitle: title || new URL(sourceUrl).hostname,
+      });
+    }
   });
-  return facts.slice(0, 4);
+  return facts.slice(0, 20);
 }
 
 function unwrapSearchResultUrl(href: string | undefined, baseUrl: string): string | undefined {
@@ -441,6 +479,9 @@ function unwrapSearchResultUrl(href: string | undefined, baseUrl: string): strin
         try { unwrapped = Buffer.from(encoded.slice(2), "base64url").toString("utf8"); } catch { /* keep original */ }
       }
     }
+    if (result.hostname.endsWith("google.com") && result.pathname === "/url") {
+      unwrapped = result.searchParams.get("q") ?? result.searchParams.get("url") ?? result.toString();
+    }
     const url = publicAssetUrl(unwrapped, baseUrl);
     if (!url) return undefined;
     return /(?:duckduckgo|google|bing)\./i.test(new URL(url).hostname) ? undefined : url;
@@ -452,11 +493,26 @@ function unwrapSearchResultUrl(href: string | undefined, baseUrl: string): strin
 export function parseResearchResultUrls(html: string, baseUrl: string): string[] {
   const page = load(html);
   const xml = load(html, { xmlMode: true });
-  const htmlUrls = page(".result__a[href], .mw-search-result-heading a[href], .b_algo h2 a[href]").map((_, node) => (
+  const htmlUrls = page(".result__a[href], a[data-testid='result-title-a'][href], .mw-search-result-heading a[href], .b_algo h2 a[href], .g a[href], a[data-ved][href], a:has(h3), a[href^='/url?']").map((_, node) => (
     unwrapSearchResultUrl(page(node).attr("href"), baseUrl) ?? ""
   )).get();
   const rssUrls = xml("item").map((_, node) => publicAssetUrl(xml(node).find("link").first().text(), baseUrl) ?? "").get();
   return dedupe([...htmlUrls, ...rssUrls], 6);
+}
+
+export function buildResearchQueries(industry: string, companyName?: string): string[] {
+  const normalizedIndustry = clean(industry, 160);
+  const authoritativeDomains = /аптек|фармацевт|лекарств/i.test(normalizedIndustry)
+    ? "site:dsm.ru OR site:rncph.ru OR site:minzdrav.gov.ru OR site:rosstat.gov.ru"
+    : "site:rosstat.gov.ru OR site:cbr.ru";
+  const queries = [
+    `${normalizedIndustry} Россия объем рынка статистика 2025 2026`,
+    `${normalizedIndustry} доля продажи аудитория исследование проценты`,
+    `${normalizedIndustry} количество компаний клиентов динамика млн млрд`,
+    `${normalizedIndustry} ${authoritativeDomains} объем продажи`,
+    ...(companyName ? [`"${clean(companyName, 100)}" показатели компания рынок`] : []),
+  ];
+  return dedupe(queries, 5);
 }
 
 export function isResearchPageRelevant(html: string, industry: string): boolean {
@@ -476,21 +532,27 @@ export function isResearchPageRelevant(html: string, industry: string): boolean 
   return matched >= 1;
 }
 
-async function collectIndustryFacts(industry: string): Promise<IndustryFact[]> {
+async function collectIndustryFacts(industry: string, companyName?: string): Promise<IndustryFact[]> {
   if (!industry || industry === "отрасль компании") return [];
-  const query = `${industry} статистика рынок проценты млн млрд`;
-  const searches = await Promise.allSettled([
-    fetchPublicHtml(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`),
-    fetchPublicHtml(`https://www.bing.com/search?q=${encodeURIComponent(query)}`),
-    fetchPublicXml(`https://www.bing.com/search?format=rss&q=${encodeURIComponent(query)}`)
-      .then((result) => ({ html: result.xml, finalUrl: result.finalUrl })),
-    fetchPublicHtml(`https://ru.wikipedia.org/w/index.php?search=${encodeURIComponent(industry)}`),
-  ]);
+  const queries = buildResearchQueries(industry, companyName);
+  const requests = queries.flatMap((query) => {
+    const encoded = encodeURIComponent(query);
+    return [
+      fetchPublicHtml(`https://html.duckduckgo.com/html/?q=${encoded}`),
+      fetchPublicHtml(`https://www.google.com/search?q=${encoded}`),
+      fetchPublicXml(`https://www.bing.com/search?format=rss&q=${encoded}`)
+        .then((result) => ({ html: result.xml, finalUrl: result.finalUrl })),
+    ];
+  });
+  requests.push(fetchPublicHtml(`https://ru.wikipedia.org/w/index.php?search=${encodeURIComponent(industry)}`));
+  const searches = await Promise.allSettled(requests);
   const resultUrls = dedupe(searches.flatMap((result) => (
     result.status === "fulfilled"
       ? parseResearchResultUrls(result.value.html, result.value.finalUrl)
       : []
-  )), 6);
+  )), 30)
+    .sort((a, b) => sourceQualityScore(b) - sourceQualityScore(a))
+    .slice(0, 14);
   const pages = await Promise.allSettled(resultUrls.map((url) => fetchPublicHtml(url)));
   const facts = pages.flatMap((result) => (
     result.status === "fulfilled" && isResearchPageRelevant(result.value.html, industry)
@@ -498,8 +560,21 @@ async function collectIndustryFacts(industry: string): Promise<IndustryFact[]> {
       : []
   ));
   const unique = new Map<string, IndustryFact>();
-  for (const fact of facts) unique.set(`${fact.sourceUrl}|${fact.displayValue}|${fact.label}`, fact);
-  return [...unique.values()].slice(0, 4);
+  for (const fact of facts.sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0))) {
+    const labelKey = clean(fact.label, 100).toLocaleLowerCase("ru").replace(/\d+/g, "#");
+    const key = `${fact.unit ?? ""}|${fact.value}|${fact.year ?? ""}|${labelKey}`;
+    if (!unique.has(key)) unique.set(key, fact);
+  }
+  const selected: IndustryFact[] = [];
+  const perSource = new Map<string, number>();
+  for (const fact of unique.values()) {
+    const count = perSource.get(fact.sourceUrl) ?? 0;
+    if (count >= 2) continue;
+    selected.push(fact);
+    perSource.set(fact.sourceUrl, count + 1);
+    if (selected.length >= 8) break;
+  }
+  return selected;
 }
 
 export function parseBingWebsiteSnapshot(html: string, website: string): WebsiteFacts | undefined {
@@ -568,7 +643,7 @@ async function collectWebsiteFactsFromBing(input: string, progress?: Presentatio
     throw new PublicWebError(`DNS сайта ${host} недоступен, и Bing не вернул данных по этому домену.`, { code: "DNS_LOOKUP" });
   }
   await progress?.(40, "Данные сайта восстановлены из поискового индекса Bing");
-  const industryFacts = await collectIndustryFacts(snapshot.industry ?? "");
+  const industryFacts = await collectIndustryFacts(snapshot.industry ?? "", snapshot.companyName);
   snapshot.industryFacts = industryFacts;
   snapshot.sources = dedupe([
     ...snapshot.sources,
@@ -585,10 +660,23 @@ async function collectWebsiteFacts(input: string, progress?: PresentationProgres
   try {
     home = await fetchPublicHtml(website);
   } catch (error) {
-    if (error instanceof PublicWebError && error.code === "DNS_LOOKUP") {
+    if (error instanceof PublicWebError && error.code === "FETCH_FAILED") {
+      try {
+        await progress?.(12, "Основной адрес временно недоступен, пробую вариант с www");
+        const alternate = new URL(website);
+        if (!alternate.hostname.startsWith("www.")) alternate.hostname = `www.${alternate.hostname}`;
+        home = await fetchPublicHtml(alternate.toString());
+      } catch (alternateError) {
+        if (alternateError instanceof PublicWebError && ["DNS_LOOKUP", "FETCH_FAILED"].includes(alternateError.code ?? "")) {
+          return collectWebsiteFactsFromBing(website, progress);
+        }
+        throw alternateError;
+      }
+    } else if (error instanceof PublicWebError && error.code === "DNS_LOOKUP") {
       return collectWebsiteFactsFromBing(website, progress);
+    } else {
+      throw error;
     }
-    throw error;
   }
   await progress?.(20, "Главная страница загружена");
   const $ = load(home.html);
@@ -662,7 +750,7 @@ async function collectWebsiteFacts(input: string, progress?: PresentationProgres
   const testimonial = $("blockquote, .testimonial, .review, [class*='отзыв']").first().text().trim() || undefined;
 
   await progress?.(50, "Ищу проверяемые отраслевые данные и источники");
-  const industryFacts = await collectIndustryFacts(industry);
+  const industryFacts = await collectIndustryFacts(industry, identity.companyName);
   sources.push(...industryFacts.map((fact) => fact.sourceUrl));
 
   await progress?.(55, "Факты и источники собраны");
@@ -781,8 +869,26 @@ function safeJson(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
 }
 
-function industryChartData(facts: WebsiteFacts, offset: number, primary: string, secondary: string): string {
-  const items = (facts.industryFacts ?? []).slice(offset, offset + 2);
+export function groupComparableIndustryFacts(facts: IndustryFact[]): IndustryFact[][] {
+  const byUnit = new Map<string, IndustryFact[]>();
+  for (const fact of facts) {
+    const unit = fact.unit ?? (fact.displayValue.replace(String(fact.value), "").trim() || "показатель");
+    const group = byUnit.get(unit) ?? [];
+    group.push(fact);
+    byUnit.set(unit, group);
+  }
+  const groups = [...byUnit.values()]
+    .map((items) => items.sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0)))
+    .sort((a, b) => b.length - a.length || (b[0]?.qualityScore ?? 0) - (a[0]?.qualityScore ?? 0));
+  return groups.flatMap((items) => {
+    const chunks: IndustryFact[][] = [];
+    for (let index = 0; index < items.length; index += 4) chunks.push(items.slice(index, index + 4));
+    return chunks;
+  }).sort((a, b) => b.length - a.length);
+}
+
+function industryChartData(facts: WebsiteFacts, chartIndex: number, primary: string, secondary: string): string {
+  const items = groupComparableIndustryFacts(facts.industryFacts ?? [])[chartIndex] ?? [];
   if (items.length === 0) {
     return safeJson({
       labels: ["Проверяемые числовые данные не найдены"],
@@ -790,7 +896,7 @@ function industryChartData(facts: WebsiteFacts, offset: number, primary: string,
     });
   }
   return safeJson({
-    labels: items.map((item) => clean(item.label, 80)),
+    labels: items.map((item) => clean(`${item.year ? `${item.year}: ` : ""}${item.label}`, 80)),
     datasets: [{
       data: items.map((item) => item.value),
       backgroundColor: items.map((_, index) => index === 0 ? primary : secondary),
@@ -800,7 +906,9 @@ function industryChartData(facts: WebsiteFacts, offset: number, primary: string,
 }
 
 function industrySourceText(facts: WebsiteFacts): string {
-  const sources = dedupe((facts.industryFacts ?? []).map((fact) => `${fact.sourceTitle}: ${fact.sourceUrl}`), 4);
+  const sources = dedupe((facts.industryFacts ?? []).map((fact) => (
+    `${fact.sourceTitle}${fact.year ? ` (${fact.year})` : ""}: ${fact.sourceUrl}`
+  )), 6);
   return sources.length > 0 ? sources.join(" · ") : "Внешний проверяемый источник с числовыми данными не найден; график показывает нулевой fallback.";
 }
 
@@ -919,12 +1027,12 @@ export function renderPresentationTemplate(
     ADVANTAGE_1: escapeHtml(itemAt(advantages, 0, "Единый стиль")),
     ADVANTAGE_2: escapeHtml(itemAt(advantages, 1, "Серийный контент")),
     MARKET_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
-    CHANNEL_CHART_DATA: industryChartData(facts, 2, theme.primary, theme.secondary),
+    CHANNEL_CHART_DATA: industryChartData(facts, 1, theme.primary, theme.secondary),
     MARKET_SOURCE: escapeHtml(industrySourceText(facts)),
     ECONOMY_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
-    VOLUME_CHART_DATA: industryChartData(facts, 2, theme.primary, theme.secondary),
+    VOLUME_CHART_DATA: industryChartData(facts, 1, theme.primary, theme.secondary),
     TRUST_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
-    REACH_CHART_DATA: industryChartData(facts, 2, theme.primary, theme.secondary),
+    REACH_CHART_DATA: industryChartData(facts, 1, theme.primary, theme.secondary),
     ROADMAP_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
     CONTACT_1_HREF: escapeHtml(contactHref(facts.contacts[0], facts.website)),
     CONTACT_1_TEXT: escapeHtml(facts.contacts[0] ?? facts.website),
