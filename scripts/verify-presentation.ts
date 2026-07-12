@@ -31,8 +31,10 @@ const facts: WebsiteFacts = {
   advantages: ["Проверяемые данные", "Единый шаблон"],
   industry: "автоматизация бизнеса",
   industryFacts: [
-    { label: "Доля внедрений составила 42 %", value: 42, displayValue: "42 %", sourceUrl: "https://research.example/report", sourceTitle: "Research report" },
-    { label: "Объём рынка достиг 18 млн", value: 18, displayValue: "18 млн", sourceUrl: "https://research.example/report", sourceTitle: "Research report" },
+    { label: "Доля внедрений", value: 42, displayValue: "42 %", unit: "%", year: 2024, sourceUrl: "https://research.example/report", sourceTitle: "Research report" },
+    { label: "Доля повторных заказов", value: 51, displayValue: "51 %", unit: "%", year: 2025, sourceUrl: "https://research.example/report", sourceTitle: "Research report" },
+    { label: "Объём рынка", value: 18, displayValue: "18 млрд ₽", unit: "млрд ₽", year: 2024, sourceUrl: "https://research.example/report-2", sourceTitle: "Research report 2" },
+    { label: "Объём онлайн-сегмента", value: 22, displayValue: "22 млрд ₽", unit: "млрд ₽", year: 2025, sourceUrl: "https://research.example/report-2", sourceTitle: "Research report 2" },
   ],
 };
 const html = renderPresentationTemplate(template, facts, undefined, new Date("2026-07-12T00:00:00Z"), {
