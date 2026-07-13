@@ -40,7 +40,7 @@ async function renderQualityTemplate(): Promise<string> {
 }
 
 function chartPayloads(html: string): Array<{ labels: string[]; datasets: Array<{ data: number[] }> }> {
-  return [...html.matchAll(/\n data:(\{[^\n]+\}),\n options:/g)].map((match) => JSON.parse(match[1]!) as {
+  return [...html.matchAll(/\r?\n data:(\{[^\r\n]+\}),\r?\n options:/g)].map((match) => JSON.parse(match[1]!) as {
     labels: string[];
     datasets: Array<{ data: number[] }>;
   });

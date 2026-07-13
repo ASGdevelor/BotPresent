@@ -2,14 +2,18 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  buildFallbackResearchQueries,
+  buildPresentationCharts,
   buildResearchQueries,
   extractWebsiteIdentity,
   groupComparableIndustryFacts,
   isResearchPageRelevant,
   isRelatedCompanyPage,
   parseBingWebsiteSnapshot,
+  parseResearchResults,
   parseResearchResultUrls,
   parseVerifiedNumericFacts,
+  parseWebsiteStatistics,
   renderPresentationTemplate,
   sourceQualityScore,
   type IndustryFact,
@@ -46,6 +50,15 @@ describe("presentation template", () => {
     expect(queries.join(" ")).toContain("2025 2026");
     expect(queries.join(" ")).toContain("Apteka.ru");
     expect(queries.join(" ")).toContain("site:dsm.ru");
+    expect(queries.join(" ")).toContain("ePharma");
+  });
+
+  test("builds a broader fallback search with the current year", () => {
+    const queries = buildFallbackResearchQueries("рынок корпоративного обучения", "Example");
+    expect(queries).toHaveLength(5);
+    expect(queries.join(" ")).toContain(String(new Date().getUTCFullYear()));
+    expect(queries.join(" ")).toContain("filetype:pdf");
+    expect(queries.join(" ")).toContain("Росстат ЕМИСС");
   });
 
   test("extracts year, unit and quality from numeric facts", () => {
@@ -80,6 +93,14 @@ describe("presentation template", () => {
     expect(parsed[0]?.value).toBe(3.2);
   });
 
+  test("rejects a competitor catalog size presented as an industry metric", () => {
+    const parsed = parseVerifiedNumericFacts(`
+      <title>Интернет-аптека</title>
+      <p>Заказ лекарств онлайн: более 20 тысяч лекарственных средств и товаров с доставкой по всей России.</p>
+    `, "https://competitor.example/catalog");
+    expect(parsed).toEqual([]);
+  });
+
   test("never mixes percentages and money in one chart group", () => {
     const comparable: IndustryFact[] = [
       { label: "Доля A", value: 42, displayValue: "42 %", unit: "%", sourceUrl: "https://a.example", sourceTitle: "A" },
@@ -108,6 +129,67 @@ describe("presentation template", () => {
       '<a href="/url?q=https%3A%2F%2Frosstat.gov.ru%2Fmarket"><h3>Official report</h3></a>',
       "https://www.google.com/search?q=test",
     )).toEqual(["https://rosstat.gov.ru/market"]);
+  });
+
+  test("keeps numeric search snippets as a fallback when a result page cannot be opened", () => {
+    const results = parseResearchResults(`<?xml version="1.0"?>
+      <rss><channel><item><title>Фармацевтический рынок России</title>
+      <link>https://research.example/report.pdf</link>
+      <description>В 2026 году объем фармацевтического рынка достиг 2,4 трлн рублей.</description>
+      </item></channel></rss>`, "https://www.bing.com/search?format=rss&q=test");
+    expect(results).toEqual([{
+      url: "https://research.example/report.pdf",
+      title: "Фармацевтический рынок России",
+      snippet: "В 2026 году объем фармацевтического рынка достиг 2,4 трлн рублей.",
+    }]);
+  });
+
+  test("extracts informative statistics from the official company site", () => {
+    const statistics = parseWebsiteStatistics(`
+      <section><h2>Нам доверяют 12 500 клиентов в 34 городах</h2>
+      <p>За 10 лет команда завершила 860 проектов.</p></section>
+    `, "https://company.example/about");
+    expect(statistics.map((item) => item.displayValue)).toEqual([
+      "12 500 клиентов", "34 регионов", "10 лет", "860 проектов",
+    ]);
+    expect(statistics.every((item) => item.sourceUrl === "https://company.example/about")).toBeTrue();
+  });
+
+  test("does not mix market share and growth percentages in one chart", () => {
+    const comparable: IndustryFact[] = [
+      { label: "Доля онлайн-продаж", value: 42, displayValue: "42 %", unit: "%", sourceUrl: "https://a.example", sourceTitle: "A" },
+      { label: "Доля офлайн-продаж", value: 58, displayValue: "58 %", unit: "%", sourceUrl: "https://b.example", sourceTitle: "B" },
+      { label: "Рост рынка за год", value: 12, displayValue: "12 %", unit: "%", sourceUrl: "https://c.example", sourceTitle: "C" },
+      { label: "Темп увеличения спроса", value: 9, displayValue: "9 %", unit: "%", sourceUrl: "https://d.example", sourceTitle: "D" },
+    ];
+    const groups = groupComparableIndustryFacts(comparable);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]!.every((item) => /Доля/.test(item.label))).toBeTrue();
+    expect(groups[1]!.every((item) => /Рост|Темп/.test(item.label))).toBeTrue();
+  });
+
+  test("does not compare annual order totals with one-month totals", () => {
+    const comparable: IndustryFact[] = [
+      { label: "В 2026 году рынок достигнет 379 млн заказов", value: 379, displayValue: "379 млн", unit: "млн", year: 2026, sourceUrl: "https://a.example", sourceTitle: "A" },
+      { label: "В 2025 году количество составило 290 млн заказов", value: 290, displayValue: "290 млн", unit: "млн", year: 2025, sourceUrl: "https://b.example", sourceTitle: "B" },
+      { label: "В декабре рынок показал 30 млн заказов", value: 30, displayValue: "30 млн", unit: "млн", sourceUrl: "https://c.example", sourceTitle: "C" },
+      { label: "Рынок начал год с 27,7 млн заказов", value: 27.7, displayValue: "27,7 млн", unit: "млн", sourceUrl: "https://d.example", sourceTitle: "D" },
+    ];
+    const groups = groupComparableIndustryFacts(comparable);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.map((item) => item.value))).toEqual([[379, 290], [30, 27.7]]);
+  });
+
+  test("builds separate sourced charts for research and official-site figures", () => {
+    const charts = buildPresentationCharts({
+      ...facts,
+      statistics: [{ label: "Компания обслуживает 120 клиентов", value: "120", displayValue: "120 клиентов", unit: "клиентов", sourceUrl: facts.website }],
+    }, "#123456", "#abcdef");
+    expect(charts).toHaveLength(7);
+    expect(charts[0]!.title).toContain("интернет-исследования");
+    expect(charts[0]!.sourceText).toContain("wikipedia.org");
+    expect(charts[1]!.title).toContain("официального сайта");
+    expect(charts[1]!.sourceText).toContain(facts.website);
   });
 
   test("builds a website snapshot from exact-domain Bing results after DNS failure", () => {
@@ -148,6 +230,10 @@ describe("presentation template", () => {
       "<title>Интернет — глобальная сеть</title><p>Доступ имеют 67 % жителей.</p>",
       "фармацевтический рынок и интернет-аптеки",
     )).toBeFalse();
+    expect(isResearchPageRelevant(
+      "<title>Рынок интернет-аптек начал год с 27,7 млн заказов</title>",
+      "интернет аптека",
+    )).toBeTrue();
   });
 
   test("extracts title, body, brand palette and the real logo from site HTML", () => {
@@ -218,7 +304,7 @@ describe("presentation template", () => {
     expect(html).toContain("3. Характеристика и описание разделов и подразделов");
     expect(html).toContain("4. Индивидуальное задание");
     expect(html).toContain("Заключение");
-    expect(html).toContain("Список использованных источников информации");
+    expect(html).not.toContain("Список использованных источников информации");
   });
 
   test("uses the user-selected palette in CSS and chart datasets", async () => {

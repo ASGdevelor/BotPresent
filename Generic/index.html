@@ -75,8 +75,10 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 .ctitle{font-size:17px;font-weight:900;line-height:1.3;margin-bottom:8px;color:var(--green)}
 .cwhat{color:var(--ink);font-size:14.5px}
 .dash2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.chartcard{border:1px solid var(--line);border-radius:18px;padding:22px;background:var(--paper);box-shadow:0 8px 22px rgba(0,0,0,.08)}
-.chartcard .cap{font-size:12.5px;color:#8a978e;margin-bottom:14px}
+.chartcard{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:22px;background:linear-gradient(145deg,var(--paper),var(--soft));box-shadow:0 12px 30px rgba(0,0,0,.09)}
+.chartcard:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--green),var(--acid))}
+.chartcard h3{font-size:16px;line-height:1.3;margin:0 0 7px;color:var(--ink)}
+.chartcard .cap{min-height:34px;font-size:11.5px;line-height:1.45;color:var(--muted);margin-bottom:12px;overflow-wrap:anywhere}
 .cv{position:relative;height:300px}.cv.tall{height:360px}
 .note,.assume,.warn{border-radius:16px;padding:17px 18px;font-size:13.5px;margin:18px 0}
 .note{background:#eef9e9;border:1px solid #cae8bf;color:#315d20}
@@ -118,7 +120,6 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 .bigm .n{font-size:38px;font-weight:900;letter-spacing:-1px;color:var(--green)}.bigm .l{color:var(--muted);font-size:13px}
 .cta{display:inline-flex;align-items:center;gap:10px;background:var(--green);color:#fff;font-weight:900;font-size:16px;padding:15px 28px;border-radius:14px;text-decoration:none;margin-top:8px;transition:.15s;box-shadow:0 14px 28px rgba(17,102,34,.24)}
 .cta:hover{background:#0c5019}
-.ctasub{color:var(--muted);font-size:13px;margin-top:14px}
 .foot{margin-top:80px;color:#8a978e;font-size:13px;border-top:1px solid var(--line);padding-top:28px}
 .contact{display:flex;flex-direction:column;gap:14px;margin-bottom:8px}.contact .cbig{font-size:22px;font-weight:900;color:var(--ink);letter-spacing:-.5px}
 .crow{display:flex;gap:12px;flex-wrap:wrap}.cpill{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:900;color:#fff;background:var(--green);border-radius:12px;padding:11px 18px;text-decoration:none}
@@ -205,13 +206,13 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
     <p class="lead">{{MARKET_LEAD}}</p>
     <div class="dash2">
       <div class="chartcard">
-        <h3>Открытые числовые факты об отрасли</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{MARKET_CHART_TITLE}}</h3>
+        <div class="cap">{{MARKET_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cMarket"></canvas></div>
       </div>
       <div class="chartcard">
-        <h3>Дополнительные проверяемые показатели</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{CHANNEL_CHART_TITLE}}</h3>
+        <div class="cap">{{CHANNEL_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cChannel"></canvas></div>
       </div>
     </div>
@@ -235,13 +236,13 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
     </div>
     <div class="dash2" style="margin-top:16px">
       <div class="chartcard">
-        <h3>Проверяемые показатели отрасли</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{ECONOMY_CHART_TITLE}}</h3>
+        <div class="cap">{{ECONOMY_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cEconomy"></canvas></div>
       </div>
       <div class="chartcard">
-        <h3>Дополнительные открытые показатели</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{VOLUME_CHART_TITLE}}</h3>
+        <div class="cap">{{VOLUME_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cVolume"></canvas></div>
       </div>
     </div>
@@ -314,13 +315,13 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
     </div>
     <div class="dash2" style="margin-top:16px">
       <div class="chartcard">
-        <h3>Открытые показатели: первая группа</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{TRUST_CHART_TITLE}}</h3>
+        <div class="cap">{{TRUST_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cTrust"></canvas></div>
       </div>
       <div class="chartcard">
-        <h3>Открытые показатели: вторая группа</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{REACH_CHART_TITLE}}</h3>
+        <div class="cap">{{REACH_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cReach"></canvas></div>
       </div>
     </div>
@@ -338,14 +339,13 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
         <div><div class="n">{{BENCH_3_VALUE}}</div><div class="l">{{BENCH_3_LABEL}}</div></div>
       </div>
       <div class="chartcard" style="margin-bottom:26px">
-        <h3>Проверяемые данные для планирования</h3>
-        <div class="cap">{{MARKET_SOURCE}}</div>
+        <h3>{{ROADMAP_CHART_TITLE}}</h3>
+        <div class="cap">{{ROADMAP_CHART_SOURCE}}</div>
         <div class="cv"><canvas id="cRoadmap"></canvas></div>
       </div>
       <a class="cta" href="https://t.me/heilen18">Обсудить в Telegram</a>
       <a class="cta" href="tel:+375 44 555 6636" target="_blank" rel="noopener">Номер телефона для связи: +375 44 555 6636</a>
 
-      <div class="ctasub">{{OFFER_CTA_SUB}}</div>
     </div>
     {{PAGE_8_EDIT}}
   </section>
@@ -361,14 +361,17 @@ if(typeof window.Chart!=='function'){
       const ctx=canvas&&canvas.getContext&&canvas.getContext('2d');
       if(!ctx)return;
       const labels=config.data.labels||[], values=(config.data.datasets&&config.data.datasets[0]&&config.data.datasets[0].data)||[];
-      const colors=(config.data.datasets&&config.data.datasets[0]&&config.data.datasets[0].backgroundColor)||GREEN;
+      const dataset=(config.data.datasets&&config.data.datasets[0])||{}, colors=dataset.backgroundColor||GREEN, unit=dataset.unit||'';
       const width=canvas.width=Math.max(640,canvas.clientWidth||0), height=canvas.height=Math.max(260,canvas.clientHeight||0);
-      const max=Math.max(1,...values.map(value=>Number(value)||0)), row=Math.max(42,(height-36)/Math.max(1,labels.length));
+      const left=250,right=74,plotWidth=width-left-right,max=Math.max(1,...values.map(value=>Number(value)||0)),row=Math.max(42,(height-34)/Math.max(1,labels.length));
       ctx.clearRect(0,0,width,height);ctx.font='12px '+Chart.defaults.font.family;ctx.textBaseline='middle';
+      ctx.strokeStyle=LINE;ctx.lineWidth=1;
+      for(let grid=0;grid<=4;grid+=1){const x=left+(plotWidth*grid/4);ctx.beginPath();ctx.moveTo(x,8);ctx.lineTo(x,height-8);ctx.stroke()}
       labels.forEach((label,index)=>{
-        const y=18+index*row, value=Number(values[index])||0, barWidth=Math.max(value===0?2:18,(width-270)*value/max);
-        ctx.fillStyle=Array.isArray(colors)?(colors[index]||colors[0]):colors;ctx.fillRect(250,y+8,barWidth,22);
-        ctx.fillStyle=Chart.defaults.color;ctx.fillText(String(label).slice(0,36),8,y+19);ctx.fillText(String(values[index]??0),258+barWidth,y+19);
+        const y=12+index*row,value=Number(values[index])||0,barWidth=Math.max(value===0?3:16,plotWidth*value/max),color=Array.isArray(colors)?(colors[index]||colors[0]):colors;
+        const gradient=ctx.createLinearGradient(left,0,left+barWidth,0);gradient.addColorStop(0,color);gradient.addColorStop(1,ACID);
+        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(left,y+7,barWidth,24,9);ctx.fill();
+        ctx.fillStyle=Chart.defaults.color;ctx.fillText(String(label).slice(0,36),8,y+19);ctx.font='700 12px '+Chart.defaults.font.family;ctx.fillText(`${values[index]??0}${unit?' '+unit:''}`,Math.min(width-right+8,left+barWidth+8),y+19);ctx.font='12px '+Chart.defaults.font.family;
       });
     }
   };
@@ -377,35 +380,38 @@ const GREEN='{{PRIMARY_COLOR}}', GREEN2='{{ACCENT}}', ACID='{{SECONDARY_COLOR}}'
 Chart.defaults.font.family={{FONT_FAMILY_JSON}};
 Chart.defaults.font.size=12;
 Chart.defaults.color='{{THEME_INK}}';
-const noLegend={plugins:{legend:{display:false}}};
+const chartOptions={responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:false,
+ layout:{padding:{top:4,right:12,bottom:4,left:4}},
+ scales:{x:{beginAtZero:true,grid:{color:LINE},border:{display:false},ticks:{color:'{{THEME_MUTED}}'}},y:{grid:{display:false},border:{display:false},ticks:{color:'{{THEME_INK}}',font:{weight:'600'}}}},
+ plugins:{legend:{display:false},tooltip:{backgroundColor:'{{THEME_PANEL}}',titleColor:'{{THEME_INK}}',bodyColor:'{{THEME_INK}}',padding:12,cornerRadius:10,callbacks:{label:context=>{const unit=context.dataset.unit||'';return `${context.parsed.x}${unit?' '+unit:''}`}}}}};
 
 new Chart(document.getElementById('cMarket'),{type:'bar',
  data:{{MARKET_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:LINE}}}}});
+ options:{...chartOptions}});
 
 new Chart(document.getElementById('cChannel'),{type:'bar',
  data:{{CHANNEL_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',scales:{x:{beginAtZero:true,grid:{color:LINE}}}}});
+ options:{...chartOptions}});
 
 new Chart(document.getElementById('cEconomy'),{type:'bar',
  data:{{ECONOMY_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',scales:{x:{beginAtZero:true}}}});
+ options:{...chartOptions}});
 
 new Chart(document.getElementById('cVolume'),{type:'bar',
  data:{{VOLUME_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',scales:{x:{beginAtZero:true}}}});
+ options:{...chartOptions}});
 
 new Chart(document.getElementById('cTrust'),{type:'bar',
  data:{{TRUST_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true}}}});
+ options:{...chartOptions}});
 
 new Chart(document.getElementById('cReach'),{type:'bar',
  data:{{REACH_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',scales:{x:{beginAtZero:true}}}});
+ options:{...chartOptions}});
 
 new Chart(document.getElementById('cRoadmap'),{type:'bar',
  data:{{ROADMAP_CHART_DATA}},
- options:{...noLegend,indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true}}}});
+ options:{...chartOptions}});
 window.__BOT_PRESENT_READY__=true;
 </script>
 </body>
