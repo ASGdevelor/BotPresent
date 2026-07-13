@@ -35,6 +35,7 @@ export interface IndustryFact {
   qualityScore?: number;
   sourceUrl: string;
   sourceTitle: string;
+  origin?: "website" | "research";
 }
 
 export interface WebsiteFacts {
@@ -50,7 +51,13 @@ export interface WebsiteFacts {
   logoUrl?: string;
   primaryColor?: string;
   secondaryColor?: string;
-  statistics: { label: string; value: string }[];
+  statistics: {
+    label: string;
+    value: string;
+    displayValue?: string;
+    unit?: string;
+    sourceUrl?: string;
+  }[];
   advantages: string[];
   testimonial?: string;      // одна цитата-отзыв
   industry?: string;
@@ -409,19 +416,24 @@ function inferIndustry($: ReturnType<typeof load>, headings: string[]): string {
 }
 
 function normalizeFactUnit(rawUnit: string, currency: string): string {
-  const unit = rawUnit.toLocaleLowerCase("ru").replace(/\.$/, "");
-  const money = /₽|руб/i.test(currency);
+  const unit = rawUnit.toLocaleLowerCase("ru").replace(/\.$/, "").trim();
+  const normalizedCurrency = currency.toLocaleLowerCase("ru");
+  const money = /₽|руб|rub/.test(normalizedCurrency);
+  const dollars = /\$|usd|доллар/.test(normalizedCurrency);
+  const euros = /€|eur|евро/.test(normalizedCurrency);
+  const currencySuffix = money ? "₽" : dollars ? "$" : euros ? "€" : "";
   if (unit === "%" || /процент/.test(unit)) return "%";
-  if (/млрд|миллиард/.test(unit)) return money ? "млрд ₽" : "млрд";
-  if (/млн|миллион/.test(unit)) return money ? "млн ₽" : "млн";
-  if (/тыс|тысяч/.test(unit)) return money ? "тыс ₽" : "тыс";
+  if (/трлн|триллион|trillion|\btn\b/.test(unit)) return `трлн${currencySuffix ? ` ${currencySuffix}` : ""}`;
+  if (/млрд|миллиард|billion|\bbn\b/.test(unit)) return `млрд${currencySuffix ? ` ${currencySuffix}` : ""}`;
+  if (/млн|миллион|million|\bmn\b/.test(unit)) return `млн${currencySuffix ? ` ${currencySuffix}` : ""}`;
+  if (/тыс|тысяч|thousand|\bk\b/.test(unit)) return `тыс${currencySuffix ? ` ${currencySuffix}` : ""}`;
   return unit;
 }
 
 export function sourceQualityScore(sourceUrl: string): number {
   const hostname = new URL(sourceUrl).hostname.replace(/^www\./, "").toLowerCase();
-  if (/\.gov\.ru$|^rosstat\.gov\.ru$|^cbr\.ru$|^minzdrav\.gov\.ru$/.test(hostname)) return 45;
-  if (/\.edu$|\.edu\.ru$|\.ac\.|eec\.eaeunion\.org$/.test(hostname)) return 38;
+  if (/\.gov\.ru$|^rosstat\.gov\.ru$|^cbr\.ru$|^minzdrav\.gov\.ru$|^fedstat\.ru$|^data\.gov\.ru$/.test(hostname)) return 45;
+  if (/\.edu$|\.edu\.ru$|\.ac\.|eec\.eaeunion\.org$|worldbank\.org$|who\.int$|oecd\.org$/.test(hostname)) return 38;
   if (/dsm\.ru$|rbc\.ru$|vedomosti\.ru$|kommersant\.ru$|tadviser\.ru$/.test(hostname)) return 30;
   if (/wikipedia\.org$|wikidata\.org$/.test(hostname)) return 18;
   if (/youtube|vk\.com$|tiktok|instagram|facebook|pinterest/.test(hostname)) return -30;
@@ -433,37 +445,100 @@ export function parseVerifiedNumericFacts(html: string, sourceUrl: string): Indu
   page("script,style,noscript,svg").remove();
   const title = clean(page("h1").first().text() || page("title").text(), 120);
   const facts: IndustryFact[] = [];
-  page("p,td,li").each((_, node) => {
+  const currentYear = new Date().getUTCFullYear();
+  page("p,td,li,dd,figcaption").each((_, node) => {
     const sentence = clean(page(node).text(), 300);
     if (sentence.length < 20) return;
     const marketContext = /рынок|об[ъь][её]м|продаж|выручк|оборот|аудитор|покупател|клиент|потребител|спрос|заказ|посещаем|насчитыва|количеств|число\s+(?:компан|аптек|клиник|магазин)|рост|вырос|снизил|динамик|доля\s+(?:рынка|продаж|онлайн)/i.test(sentence);
     const ownershipContext = /дол[яю]\s+(?:в\s+)?(?:компани|капитал)|акци[йи]|акционер|консолидирова|владеет|структур[аы]\s+капитала|результат[еы]?\s+сделк|инвестици[йи]\s+в\s+компани/i.test(sentence);
     const sectorContext = /рынок|отрасл|сегмент|росси[ияй]|по\s+стране|совокупн|общ(?:ий|ая)\s+об[ъь][её]м|насчитыва|количеств|число\s+(?:компан|аптек|клиник|магазин)|доля\s+(?:рынка|продаж|онлайн)/i.test(sentence);
     const companyFinancialContext = /\b(?:ООО|АО|ПАО|ЗАО)\b|выручка\s+(?:компании|сервис|ООО|АО)|оборот\s+[«"]?[\p{L}\d.-]+[»"]?/iu.test(sentence);
-    if (!marketContext || ownershipContext || (companyFinancialContext && !sectorContext)) return;
-    const pattern = /(?:^|\s)(\d{1,3}(?:[\s.](?:\d{3})(?!\d))*(?:[,.]\d+)?)\s*(%|процент(?:а|ов)?|млрд\.?|млн\.?|тыс\.?|миллионов?|миллиардов?|тысяч(?:а|и)?)\s*(₽|руб(?:лей|ля|\.)?)?/gi;
+    const catalogContext = /ассортимент|каталог|товар(?:ов|а)|лекарственн(?:ых|ые)\s+средств|sku|наименовани[йя]/i.test(sentence);
+    const industryScopeContext = /рынок|отрасл|сегмент|совокупн|общ(?:ий|ая)\s+об[ъь][её]м|доля\s+(?:рынка|продаж|онлайн)/i.test(sentence);
+    if (!marketContext || ownershipContext || (companyFinancialContext && !sectorContext) || (catalogContext && !industryScopeContext)) return;
+    const pattern = /(?:^|[\s(])(?:(₽|руб(?:лей|ля|\.)?|rub|\$|usd|доллар(?:ов|а)?|€|eur|евро)\s*)?(\d{1,3}(?:[\s.](?:\d{3})(?!\d))*(?:[,.]\d+)?)\s*(%|процент(?:а|ов)?|трлн\.?|млрд\.?|млн\.?|тыс\.?|триллион(?:ов|а)?|миллион(?:ов|а)?|миллиард(?:ов|а)?|тысяч(?:а|и)?|trillion|billion|million|thousand|tn|bn|mn|k)\s*(₽|руб(?:лей|ля|\.)?|rub|\$|usd|доллар(?:ов|а)?|€|eur|евро)?/gi;
     for (const match of sentence.matchAll(pattern)) {
-      const normalized = match[1]?.replace(/[\s.](?=\d{3}(?:\D|$))/g, "").replace(",", ".") ?? "";
+      const normalized = match[2]?.replace(/[\s.](?=\d{3}(?:\D|$))/g, "").replace(",", ".") ?? "";
       const value = Number.parseFloat(normalized);
       if (!Number.isFinite(value) || value < 0) continue;
-      const unit = normalizeFactUnit(match[2] ?? "", match[3] ?? "");
-      const yearMatch = sentence.match(/\b(20(?:1[8-9]|2[0-6]))\b/);
-      const year = yearMatch ? Number(yearMatch[1]) : undefined;
-      const recency = year ? Math.max(0, 14 - (2026 - year) * 3) : 0;
+      const unit = normalizeFactUnit(match[3] ?? "", `${match[1] ?? ""} ${match[4] ?? ""}`);
+      const yearMatch = sentence.match(/\b(20\d{2})\b/);
+      const parsedYear = yearMatch ? Number(yearMatch[1]) : undefined;
+      const year = parsedYear && parsedYear >= 2018 && parsedYear <= currentYear + 1 ? parsedYear : undefined;
+      const recency = year ? Math.max(0, 18 - Math.max(0, currentYear - year) * 3) : 0;
       const contextScore = Math.min(20, Math.round(sentence.length / 20));
       facts.push({
         label: sentence,
         value,
-        displayValue: `${match[1]} ${unit}`,
+        displayValue: `${match[2]} ${unit}`,
         unit,
         ...(year ? { year } : {}),
         qualityScore: sourceQualityScore(sourceUrl) + recency + contextScore,
         sourceUrl,
         sourceTitle: title || new URL(sourceUrl).hostname,
+        origin: "research",
       });
     }
   });
   return facts.slice(0, 20);
+}
+
+function normalizeWebsiteStatisticUnit(rawUnit: string, currency: string): string {
+  const numericUnit = normalizeFactUnit(rawUnit, currency);
+  if (numericUnit !== rawUnit.toLocaleLowerCase("ru").replace(/\.$/, "").trim()) return numericUnit;
+  const unit = rawUnit.toLocaleLowerCase("ru").replace(/\.$/, "").trim();
+  if (/клиент|покупател|пользовател/.test(unit)) return "клиентов";
+  if (/проект|заказ/.test(unit)) return "проектов";
+  if (/сотрудник|специалист/.test(unit)) return "сотрудников";
+  if (/партн[её]р/.test(unit)) return "партнёров";
+  if (/офис|филиал|магазин|аптек|клиник/.test(unit)) return "точек";
+  if (/стран|город|регион/.test(unit)) return "регионов";
+  if (/лет|год/.test(unit)) return "лет";
+  return unit;
+}
+
+/** Извлекает только подписанные показатели с официального сайта компании. */
+export function parseWebsiteStatistics(html: string, sourceUrl: string): WebsiteFacts["statistics"] {
+  const page = load(html);
+  page("script,style,noscript,svg").remove();
+  const results: WebsiteFacts["statistics"] = [];
+  const seen = new Set<string>();
+  const pattern = /(?:^|[\s(])(?:(₽|руб(?:лей|ля|\.)?|rub|\$|usd|€|eur)\s*)?(\d{1,3}(?:[\s.](?:\d{3})(?!\d))*(?:[,.]\d+)?)\s*(%|процент(?:а|ов)?|трлн\.?|млрд\.?|млн\.?|тыс\.?|клиент(?:ов|а)?|покупател(?:ей|я)?|пользовател(?:ей|я)?|проект(?:ов|а)?|заказ(?:ов|а)?|сотрудник(?:ов|а)?|специалист(?:ов|а)?|партн[её]р(?:ов|а)?|офис(?:ов|а)?|филиал(?:ов|а)?|магазин(?:ов|а)?|аптек(?:а|и)?|клиник(?:а|и)?|стран(?:а|ы)?|город(?:ов|а)?|регион(?:ов|а)?|лет|год(?:а|ов)?)\s*(₽|руб(?:лей|ля|\.)?|rub|\$|usd|€|eur)?/gi;
+
+  page("h1,h2,h3,p,li,dd,[class*='stat'],[class*='number'],[class*='metric'],[class*='counter']").each((_, node) => {
+    const sentence = clean(page(node).text(), 260);
+    if (sentence.length < 6 || sentence.length > 260) return;
+    for (const match of sentence.matchAll(pattern)) {
+      const normalized = match[2]?.replace(/[\s.](?=\d{3}(?:\D|$))/g, "").replace(",", ".") ?? "";
+      const value = Number.parseFloat(normalized);
+      if (!Number.isFinite(value) || value < 0) continue;
+      const unit = normalizeWebsiteStatisticUnit(match[3] ?? "", `${match[1] ?? ""} ${match[4] ?? ""}`);
+      const key = `${value}|${unit}|${sentence.toLocaleLowerCase("ru").replace(/\d+/g, "#")}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        label: sentence,
+        value: String(value),
+        displayValue: `${match[2]} ${unit}`.trim(),
+        unit,
+        sourceUrl,
+      });
+      if (results.length >= 10) return false;
+    }
+  });
+  return results;
+}
+
+function dedupeWebsiteStatistics(
+  statistics: WebsiteFacts["statistics"],
+  limit: number,
+): WebsiteFacts["statistics"] {
+  const unique = new Map<string, WebsiteFacts["statistics"][number]>();
+  for (const statistic of statistics) {
+    const key = `${statistic.value}|${statistic.unit ?? ""}|${clean(statistic.label, 100).toLocaleLowerCase("ru").replace(/\d+/g, "#")}`;
+    if (!unique.has(key)) unique.set(key, statistic);
+  }
+  return [...unique.values()].slice(0, limit);
 }
 
 function unwrapSearchResultUrl(href: string | undefined, baseUrl: string): string | undefined {
@@ -490,29 +565,92 @@ function unwrapSearchResultUrl(href: string | undefined, baseUrl: string): strin
   }
 }
 
-export function parseResearchResultUrls(html: string, baseUrl: string): string[] {
+export interface ResearchResult {
+  url: string;
+  title: string;
+  snippet: string;
+}
+
+/** Читает и обычную HTML-выдачу, и RSS; сниппеты служат резервом, если страница источника недоступна. */
+export function parseResearchResults(html: string, baseUrl: string): ResearchResult[] {
   const page = load(html);
   const xml = load(html, { xmlMode: true });
-  const htmlUrls = page(".result__a[href], a[data-testid='result-title-a'][href], .mw-search-result-heading a[href], .b_algo h2 a[href], .g a[href], a[data-ved][href], a:has(h3), a[href^='/url?']").map((_, node) => (
-    unwrapSearchResultUrl(page(node).attr("href"), baseUrl) ?? ""
-  )).get();
-  const rssUrls = xml("item").map((_, node) => publicAssetUrl(xml(node).find("link").first().text(), baseUrl) ?? "").get();
-  return dedupe([...htmlUrls, ...rssUrls], 6);
+  const results = new Map<string, ResearchResult>();
+  const add = (url: string | undefined, title: string, snippet: string): void => {
+    if (!url || results.has(url)) return;
+    const snippetText = snippet.includes("<") ? load(snippet).root().text() : snippet;
+    results.set(url, { url, title: clean(title, 180), snippet: clean(snippetText, 600) });
+  };
+
+  page(".result, .b_algo, .g, .mw-search-result").each((_, node) => {
+    const item = page(node);
+    const anchor = item.find(".result__a[href], a[data-testid='result-title-a'][href], h2 a[href], h3 a[href], a:has(h3)").first();
+    add(
+      unwrapSearchResultUrl(anchor.attr("href"), baseUrl),
+      anchor.text() || item.find("h2,h3").first().text(),
+      item.find(".result__snippet, .b_caption p, .VwiC3b, p").first().text(),
+    );
+  });
+
+  page(".result__a[href], a[data-testid='result-title-a'][href], .mw-search-result-heading a[href], .b_algo h2 a[href], .g a[href], a[data-ved][href], a:has(h3), a[href^='/url?']").each((_, node) => {
+    const anchor = page(node);
+    const container = anchor.closest(".result, .b_algo, .g, .mw-search-result");
+    add(
+      unwrapSearchResultUrl(anchor.attr("href"), baseUrl),
+      anchor.text() || anchor.find("h3").text(),
+      container.find(".result__snippet, .b_caption p, .VwiC3b, p").first().text(),
+    );
+  });
+
+  xml("item").each((_, node) => {
+    const item = xml(node);
+    add(
+      publicAssetUrl(item.find("link").first().text(), baseUrl),
+      item.find("title").first().text(),
+      item.find("description").first().text(),
+    );
+  });
+  return [...results.values()].slice(0, 10);
+}
+
+export function parseResearchResultUrls(html: string, baseUrl: string): string[] {
+  return parseResearchResults(html, baseUrl).map((result) => result.url).slice(0, 6);
 }
 
 export function buildResearchQueries(industry: string, companyName?: string): string[] {
   const normalizedIndustry = clean(industry, 160);
+  const researchSubject = /аптек|фармацевт|лекарств/i.test(normalizedIndustry)
+    ? `${normalizedIndustry} фармацевтический рынок ePharma`
+    : normalizedIndustry;
+  const currentYear = new Date().getUTCFullYear();
+  const previousYear = currentYear - 1;
   const authoritativeDomains = /аптек|фармацевт|лекарств/i.test(normalizedIndustry)
     ? "site:dsm.ru OR site:rncph.ru OR site:minzdrav.gov.ru OR site:rosstat.gov.ru"
-    : "site:rosstat.gov.ru OR site:cbr.ru";
+    : "site:rosstat.gov.ru OR site:fedstat.ru OR site:cbr.ru";
   const queries = [
-    `${normalizedIndustry} Россия объем рынка статистика 2025 2026`,
-    `${normalizedIndustry} доля продажи аудитория исследование проценты`,
-    `${normalizedIndustry} количество компаний клиентов динамика млн млрд`,
-    `${normalizedIndustry} ${authoritativeDomains} объем продажи`,
-    ...(companyName ? [`"${clean(companyName, 100)}" показатели компания рынок`] : []),
+    `${researchSubject} Россия объем рынка статистика ${previousYear} ${currentYear}`,
+    `${researchSubject} Россия доля продажи аудитория исследование ${previousYear} ${currentYear} проценты`,
+    `${researchSubject} Россия количество компаний клиентов динамика ${previousYear} ${currentYear} млн млрд`,
+    `${researchSubject} ${authoritativeDomains} объем продажи ${previousYear} ${currentYear}`,
+    ...(companyName ? [`"${clean(companyName, 100)}" показатели компания рынок ${previousYear} ${currentYear}`] : []),
   ];
   return dedupe(queries, 5);
+}
+
+export function buildFallbackResearchQueries(industry: string, companyName?: string): string[] {
+  const normalizedIndustry = clean(industry, 160);
+  const researchSubject = /аптек|фармацевт|лекарств/i.test(normalizedIndustry)
+    ? `${normalizedIndustry} фармацевтический рынок ePharma`
+    : normalizedIndustry;
+  const currentYear = new Date().getUTCFullYear();
+  const years = [currentYear - 3, currentYear - 2, currentYear - 1, currentYear].join(" ");
+  return dedupe([
+    `"${researchSubject}" Россия обзор рынка отчет filetype:pdf ${currentYear}`,
+    `"${researchSubject}" динамика рынок продажи ${years}`,
+    `"${researchSubject}" Росстат ЕМИСС статистика показатель`,
+    `"${researchSubject}" исследование аудитория спрос доля рост`,
+    ...(companyName ? [`"${clean(companyName, 100)}" отрасль исследование статистика`] : []),
+  ], 5);
 }
 
 export function isResearchPageRelevant(html: string, industry: string): boolean {
@@ -526,55 +664,111 @@ export function isResearchPageRelevant(html: string, industry: string): boolean 
   const keywords = [...new Set(industry.toLocaleLowerCase("ru").replace(/ё/g, "е")
     .split(/[^\p{L}\d]+/u)
     .filter((word) => word.length >= 4 && !ignored.has(word))
-    .map((word) => word.length > 7 ? word.slice(0, 6) : word))];
+    .map((word) => word.replace(/(?:иями|ями|ами|ого|ему|ому|ыми|ими|ов|ев|ах|ях|ой|ый|ий|ая|яя|ое|ее|а|я|ы|и)$/u, ""))
+    .map((word) => word.length > 7 ? word.slice(0, 6) : word)
+    .filter((word) => word.length >= 4))];
   if (keywords.length === 0) return false;
   const matched = keywords.filter((keyword) => context.includes(keyword)).length;
   return matched >= 1;
 }
 
-async function collectIndustryFacts(industry: string, companyName?: string): Promise<IndustryFact[]> {
-  if (!industry || industry === "отрасль компании") return [];
-  const queries = buildResearchQueries(industry, companyName);
-  const requests = queries.flatMap((query) => {
-    const encoded = encodeURIComponent(query);
-    return [
-      fetchPublicHtml(`https://html.duckduckgo.com/html/?q=${encoded}`),
-      fetchPublicHtml(`https://www.google.com/search?q=${encoded}`),
-      fetchPublicXml(`https://www.bing.com/search?format=rss&q=${encoded}`)
-        .then((result) => ({ html: result.xml, finalUrl: result.finalUrl })),
-    ];
-  });
-  requests.push(fetchPublicHtml(`https://ru.wikipedia.org/w/index.php?search=${encodeURIComponent(industry)}`));
-  const searches = await Promise.allSettled(requests);
-  const resultUrls = dedupe(searches.flatMap((result) => (
-    result.status === "fulfilled"
-      ? parseResearchResultUrls(result.value.html, result.value.finalUrl)
-      : []
-  )), 30)
-    .sort((a, b) => sourceQualityScore(b) - sourceQualityScore(a))
-    .slice(0, 14);
-  const pages = await Promise.allSettled(resultUrls.map((url) => fetchPublicHtml(url)));
-  const facts = pages.flatMap((result) => (
-    result.status === "fulfilled" && isResearchPageRelevant(result.value.html, industry)
-      ? parseVerifiedNumericFacts(result.value.html, result.value.finalUrl)
-      : []
-  ));
+function industryMetricKind(fact: IndustryFact): string {
+  const label = fact.label.toLocaleLowerCase("ru");
+  const unit = fact.unit?.toLocaleLowerCase("ru") ?? "";
+  if (unit === "%") {
+    if (/дол[яию]|удельн/.test(label)) return "share";
+    if (/рост|вырос|увелич|сниз|сократ|динамик|темп/.test(label)) return "change";
+    return "percentage";
+  }
+  if (/[₽$€]|руб|rub|usd|eur/.test(unit)) return "volume";
+  if (/заказ|количеств|число|насчитыва|точек|аптек|магазин|клиник/.test(label)) return "count";
+  if (/аудитор|клиент|покупател|пользовател|посещ/.test(label)) return "audience";
+  if (/объем|объём|выруч|оборот|продаж|рынок/.test(label)) return "volume";
+  if (/рост|вырос|увелич|сниз|сократ|динамик|темп/.test(label)) return "change";
+  return "other";
+}
+
+function industryMetricPeriod(fact: IndustryFact): "period" | "year" | "unspecified" {
+  const label = fact.label.toLocaleLowerCase("ru");
+  if (/месяц|квартал|январ|феврал|март(?:а|е)?|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр|начал\s+год/.test(label)) return "period";
+  if (/за\s+20\d{2}\s+год|в\s+20\d{2}\s+(?:году|г\.)|годов(?:ой|ая)|за\s+год/.test(label)) return "year";
+  return "unspecified";
+}
+
+function comparableMetricPeriod(fact: IndustryFact): "period" | "year" | "unspecified" {
+  return ["count", "volume", "audience"].includes(industryMetricKind(fact))
+    ? industryMetricPeriod(fact)
+    : "unspecified";
+}
+
+function selectIndustryFacts(facts: IndustryFact[]): IndustryFact[] {
   const unique = new Map<string, IndustryFact>();
   for (const fact of facts.sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0))) {
-    const labelKey = clean(fact.label, 100).toLocaleLowerCase("ru").replace(/\d+/g, "#");
-    const key = `${fact.unit ?? ""}|${fact.value}|${fact.year ?? ""}|${labelKey}`;
+    const key = `${industryMetricKind(fact)}|${comparableMetricPeriod(fact)}|${fact.unit ?? ""}|${fact.value}|${fact.year ?? ""}`;
     if (!unique.has(key)) unique.set(key, fact);
   }
   const selected: IndustryFact[] = [];
   const perSource = new Map<string, number>();
   for (const fact of unique.values()) {
     const count = perSource.get(fact.sourceUrl) ?? 0;
-    if (count >= 2) continue;
+    if (count >= 3) continue;
     selected.push(fact);
     perSource.set(fact.sourceUrl, count + 1);
-    if (selected.length >= 8) break;
+    if (selected.length >= 14) break;
   }
   return selected;
+}
+
+async function searchIndustryFacts(queries: string[], industry: string): Promise<IndustryFact[]> {
+  const requests = queries.flatMap((query) => {
+    const encoded = encodeURIComponent(query);
+    return [
+      fetchPublicHtml(`https://html.duckduckgo.com/html/?q=${encoded}`),
+      fetchPublicXml(`https://www.bing.com/search?format=rss&cc=ru&setlang=ru-RU&q=${encoded}`)
+        .then((result) => ({ html: result.xml, finalUrl: result.finalUrl })),
+      fetchPublicXml(`https://news.google.com/rss/search?q=${encoded}&hl=ru&gl=RU&ceid=RU:ru`)
+        .then((result) => ({ html: result.xml, finalUrl: result.finalUrl })),
+    ];
+  });
+  const searches = await Promise.allSettled(requests);
+  const searchResults = searches.flatMap((result) => (
+    result.status === "fulfilled" ? parseResearchResults(result.value.html, result.value.finalUrl) : []
+  ));
+  const snippetFacts = searchResults.flatMap((result) => {
+    if (!result.snippet) return [];
+    const snippetHtml = `<title>${escapeHtml(result.title)}</title><meta name="description" content="${escapeHtml(result.snippet)}"><p>${escapeHtml(result.snippet)}</p>`;
+    return isResearchPageRelevant(snippetHtml, industry)
+      ? parseVerifiedNumericFacts(snippetHtml, result.url).map((fact) => ({
+          ...fact,
+          qualityScore: (fact.qualityScore ?? 0) - 8,
+        }))
+      : [];
+  });
+  const resultUrls = dedupe(searchResults.map((result) => result.url), 40)
+    .sort((a, b) => sourceQualityScore(b) - sourceQualityScore(a))
+    .slice(0, 18);
+  const pages = await Promise.allSettled(resultUrls.map((url) => fetchPublicHtml(url)));
+  const pageFacts = pages.flatMap((result) => (
+    result.status === "fulfilled" && isResearchPageRelevant(result.value.html, industry)
+      ? parseVerifiedNumericFacts(result.value.html, result.value.finalUrl)
+      : []
+  ));
+  return [...pageFacts, ...snippetFacts];
+}
+
+async function collectIndustryFacts(industry: string, companyName?: string): Promise<IndustryFact[]> {
+  if (!industry || industry === "отрасль компании") return [];
+  const relevanceTopic = /аптек|фармацевт|лекарств/i.test(industry)
+    ? `${industry} фармацевтический рынок ePharma`
+    : industry;
+  const primaryFacts = await searchIndustryFacts(buildResearchQueries(industry, companyName), relevanceTopic);
+  let selected = selectIndustryFacts(primaryFacts);
+  const comparableGroups = groupComparableIndustryFacts(selected).filter((group) => group.length >= 2);
+  if (selected.length < 6 || comparableGroups.length < 2) {
+    const fallbackFacts = await searchIndustryFacts(buildFallbackResearchQueries(industry, companyName), relevanceTopic);
+    selected = selectIndustryFacts([...primaryFacts, ...fallbackFacts]);
+  }
+  return selected.slice(0, 12);
 }
 
 export function parseBingWebsiteSnapshot(html: string, website: string): WebsiteFacts | undefined {
@@ -688,6 +882,7 @@ async function collectWebsiteFacts(input: string, progress?: PresentationProgres
   const identity = extractWebsiteIdentity(home.html, home.finalUrl, externalCss);
   const headings = [...identity.headings];
   const industry = identity.industry;
+  const statistics = parseWebsiteStatistics(home.html, home.finalUrl);
   $("script, style, noscript, svg").remove();
 
   // Услуги – расширенный поиск
@@ -723,16 +918,9 @@ async function collectWebsiteFacts(input: string, progress?: PresentationProgres
       ...related("a[href^='tel:']").map((_, node) => clean(related(node).text()) || (related(node).attr("href") ?? "").replace(/^tel:/, "")).get(),
       ...related("a[href*='t.me/']").map((_, node) => related(node).attr("href") ?? "").get(),
     );
+    statistics.push(...parseWebsiteStatistics(result.value.html, result.value.finalUrl));
     sources.push(result.value.finalUrl);
     await progress?.(25 + Math.round(((index + 1) / Math.max(1, relatedPages.length)) * 24), "Анализирую услуги, контакты и разделы сайта");
-  }
-
-  // --- Новые блоки: статистика, преимущества, отзыв ---
-  const numbersPattern = /(\d{1,3}(?:[\s.,]\d{3})*(?:[,.]\d+)?)\s*(?:лет|года?|проектов|клиентов|сотрудников|партнёров|офисов|стран|городов|филиалов|заказов|отзывов|рейтинг|баллов?)/gi;
-  const statMatches = $("body").text().matchAll(numbersPattern);
-  const statistics = [];
-  for (const m of statMatches) {
-    statistics.push({ label: m[0].replace(/\d[\d\s.,]*/, "").trim(), value: m[0].replace(/[^\d]/g, "") });
   }
 
   const advantages: string[] = [];
@@ -774,7 +962,7 @@ async function collectWebsiteFacts(input: string, progress?: PresentationProgres
     logoUrl: identity.logoUrl,
     primaryColor: identity.primaryColor,
     secondaryColor: identity.secondaryColor,
-    statistics: statistics.slice(0, 6),
+    statistics: dedupeWebsiteStatistics(statistics, 8),
     advantages: dedupe(advantages, 8),
     testimonial: testimonial ? clean(testimonial, 300) : undefined,
     industry,
@@ -873,9 +1061,11 @@ export function groupComparableIndustryFacts(facts: IndustryFact[]): IndustryFac
   const byUnit = new Map<string, IndustryFact[]>();
   for (const fact of facts) {
     const unit = fact.unit ?? (fact.displayValue.replace(String(fact.value), "").trim() || "показатель");
-    const group = byUnit.get(unit) ?? [];
+    const metric = industryMetricKind(fact);
+    const key = `${metric}|${comparableMetricPeriod(fact)}|${unit.toLocaleLowerCase("ru")}`;
+    const group = byUnit.get(key) ?? [];
     group.push(fact);
-    byUnit.set(unit, group);
+    byUnit.set(key, group);
   }
   const groups = [...byUnit.values()]
     .map((items) => items.sort((a, b) => (b.qualityScore ?? 0) - (a.qualityScore ?? 0)))
@@ -887,21 +1077,86 @@ export function groupComparableIndustryFacts(facts: IndustryFact[]): IndustryFac
   }).sort((a, b) => b.length - a.length);
 }
 
-function industryChartData(facts: WebsiteFacts, chartIndex: number, primary: string, secondary: string): string {
-  const items = groupComparableIndustryFacts(facts.industryFacts ?? [])[chartIndex] ?? [];
+export interface PresentationChart {
+  title: string;
+  sourceText: string;
+  data: string;
+}
+
+function chartTitle(items: IndustryFact[], fromWebsite: boolean): string {
+  if (items.length === 0) return "Проверяемые числовые данные не найдены";
+  const prefix = fromWebsite ? "Данные официального сайта" : "Данные интернет-исследования";
+  const metric = industryMetricKind(items[0]!);
+  const period = comparableMetricPeriod(items[0]!);
+  const suffix = period === "year" ? " за год" : period === "period" ? " за отдельный период" : "";
+  if (metric === "share" || metric === "percentage") return `${prefix}: доли и проценты${suffix}`;
+  if (metric === "change") return `${prefix}: динамика${suffix}`;
+  if (metric === "volume") return `${prefix}: объём и продажи${suffix}`;
+  if (metric === "audience") return `${prefix}: аудитория и клиенты${suffix}`;
+  if (metric === "count") return `${prefix}: количество и заказы${suffix}`;
+  return `${prefix}: открытые показатели`;
+}
+
+function chartSourceText(items: IndustryFact[]): string {
+  const sources = dedupe(items.map((item) => (
+    `${item.sourceTitle}${item.year ? ` (${item.year})` : ""}: ${item.sourceUrl}`
+  )), 3);
+  return sources.length > 0
+    ? sources.join(" · ")
+    : "После основного и расширенного интернет-поиска сопоставимые данные не найдены; значения не выдумываются.";
+}
+
+function chartData(items: IndustryFact[], primary: string, secondary: string): string {
   if (items.length === 0) {
     return safeJson({
       labels: ["Проверяемые числовые данные не найдены"],
-      datasets: [{ data: [0], backgroundColor: [primary], borderRadius: 8 }],
+      datasets: [{ data: [0], unit: "", sourceUrls: [], backgroundColor: [primary], borderColor: [primary], borderWidth: 1, borderRadius: 10 }],
     });
   }
   return safeJson({
     labels: items.map((item) => clean(`${item.year ? `${item.year}: ` : ""}${item.label}`, 80)),
     datasets: [{
       data: items.map((item) => item.value),
-      backgroundColor: items.map((_, index) => index === 0 ? primary : secondary),
-      borderRadius: 8,
+      unit: items[0]?.unit ?? "",
+      sourceUrls: items.map((item) => item.sourceUrl),
+      backgroundColor: items.map((_, index) => index % 2 === 0 ? primary : secondary),
+      borderColor: items.map((_, index) => index % 2 === 0 ? primary : secondary),
+      borderWidth: 1,
+      borderRadius: 10,
     }],
+  });
+}
+
+export function buildPresentationCharts(facts: WebsiteFacts, primary: string, secondary: string): PresentationChart[] {
+  const researchGroups = groupComparableIndustryFacts(facts.industryFacts ?? []);
+  const websiteFacts: IndustryFact[] = facts.statistics.flatMap((statistic) => {
+    const value = Number.parseFloat(statistic.value.replace(",", "."));
+    if (!Number.isFinite(value)) return [];
+    return [{
+      label: statistic.label,
+      value,
+      displayValue: statistic.displayValue ?? `${statistic.value} ${statistic.unit ?? ""}`.trim(),
+      unit: statistic.unit,
+      qualityScore: 35,
+      sourceUrl: statistic.sourceUrl ?? facts.website,
+      sourceTitle: `Официальный сайт ${facts.companyName}`,
+      origin: "website" as const,
+    }];
+  });
+  const websiteGroups = groupComparableIndustryFacts(websiteFacts);
+  const groups = [
+    ...researchGroups.map((items) => ({ items, fromWebsite: false })),
+    ...websiteGroups.map((items) => ({ items, fromWebsite: true })),
+  ];
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const group = groups[index];
+    const items = group?.items ?? [];
+    return {
+      title: chartTitle(items, group?.fromWebsite ?? false),
+      sourceText: chartSourceText(items),
+      data: chartData(items, primary, secondary),
+    };
   });
 }
 
@@ -910,20 +1165,6 @@ function industrySourceText(facts: WebsiteFacts): string {
     `${fact.sourceTitle}${fact.year ? ` (${fact.year})` : ""}: ${fact.sourceUrl}`
   )), 6);
   return sources.length > 0 ? sources.join(" · ") : "Внешний проверяемый источник с числовыми данными не найден; график показывает нулевой fallback.";
-}
-
-function bibliographyText(facts: WebsiteFacts): string {
-  const titleByUrl = new Map((facts.industryFacts ?? []).map((fact) => [fact.sourceUrl, fact.sourceTitle]));
-  const urls = [...new Set([
-    facts.website,
-    ...(facts.industryFacts ?? []).map((fact) => fact.sourceUrl),
-    ...facts.sources,
-  ])].slice(0, 12);
-  return urls.map((url, index) => {
-    if (url === facts.website) return `${index + 1}. Официальный сайт ${facts.companyName}: ${url}`;
-    const title = titleByUrl.get(url) ?? "Исследованная страница сайта";
-    return `${index + 1}. ${title}: ${url}`;
-  }).join(" · ");
 }
 
 function contactHref(contact: string | undefined, website: string): string {
@@ -944,6 +1185,7 @@ export function renderPresentationTemplate(
 ): string {
   const preferences = defaultPreferences(preferencesInput);
   const theme = resolveTheme(facts, preferences);
+  const charts = buildPresentationCharts(facts, theme.primary, theme.secondary);
   const services = facts.services.length > 0 ? facts.services : facts.headings;
   const industry = facts.industry ?? itemAt(services, 0, "направление компании");
   const fallbackLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96"><rect width="100%" height="100%" rx="16" fill="${theme.secondary}"/><text x="50%" y="56%" text-anchor="middle" font-family="Arial" font-size="24" font-weight="700" fill="${theme.primary}">${escapeHtml(clean(facts.companyName, 28))}</text></svg>`)}`;
@@ -990,7 +1232,7 @@ export function renderPresentationTemplate(
     CONTENTS_1_1: "1.1. Общие сведения о предприятии · стр. 4 · 1.2. Общая характеристика информационного проекта · стр. 4 · 1.3. Структура команды для разработки и реализации проекта · стр. 6",
     CONTENTS_2: "2. Характеристика и описание информационных инструментов, использованных в течение практики",
     CONTENTS_3: "3. Характеристика и описание разделов и подразделов информационного проекта · стр. 8",
-    CONTENTS_4: "4. Индивидуальное задание · стр. 10 · Заключение · стр. 11 · Список использованных источников информации · стр. 12",
+    CONTENTS_4: "4. Индивидуальное задание · стр. 10 · Заключение · стр. 11",
     INTRO_TITLE: "Введение",
 
     INDUSTRY: escapeHtml(industry),
@@ -1023,17 +1265,30 @@ export function renderPresentationTemplate(
     OFFER_LEAD: `В результате проанализирован сайт ${escapeHtml(facts.companyName)}, определены его основные направления, контакты и визуальная палитра, сформирована структура информационного проекта и подготовлены графики на основе доступных проверяемых источников. ${escapeHtml(relevance)}`,
     OFFER_METRICS: offerMetrics(facts),
     OFFER_CTA: `<a class="cta" href="${escapeHtml(facts.website)}">Перейти на сайт компании</a>`,
-    OFFER_CTA_SUB: `<b>Список использованных источников информации · стр. 12.</b> ${escapeHtml(bibliographyText(facts))}`,
     ADVANTAGE_1: escapeHtml(itemAt(advantages, 0, "Единый стиль")),
     ADVANTAGE_2: escapeHtml(itemAt(advantages, 1, "Серийный контент")),
-    MARKET_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
-    CHANNEL_CHART_DATA: industryChartData(facts, 1, theme.primary, theme.secondary),
+    MARKET_CHART_DATA: charts[0]!.data,
+    MARKET_CHART_TITLE: escapeHtml(charts[0]!.title),
+    MARKET_CHART_SOURCE: escapeHtml(charts[0]!.sourceText),
+    CHANNEL_CHART_DATA: charts[1]!.data,
+    CHANNEL_CHART_TITLE: escapeHtml(charts[1]!.title),
+    CHANNEL_CHART_SOURCE: escapeHtml(charts[1]!.sourceText),
     MARKET_SOURCE: escapeHtml(industrySourceText(facts)),
-    ECONOMY_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
-    VOLUME_CHART_DATA: industryChartData(facts, 1, theme.primary, theme.secondary),
-    TRUST_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
-    REACH_CHART_DATA: industryChartData(facts, 1, theme.primary, theme.secondary),
-    ROADMAP_CHART_DATA: industryChartData(facts, 0, theme.primary, theme.secondary),
+    ECONOMY_CHART_DATA: charts[2]!.data,
+    ECONOMY_CHART_TITLE: escapeHtml(charts[2]!.title),
+    ECONOMY_CHART_SOURCE: escapeHtml(charts[2]!.sourceText),
+    VOLUME_CHART_DATA: charts[3]!.data,
+    VOLUME_CHART_TITLE: escapeHtml(charts[3]!.title),
+    VOLUME_CHART_SOURCE: escapeHtml(charts[3]!.sourceText),
+    TRUST_CHART_DATA: charts[4]!.data,
+    TRUST_CHART_TITLE: escapeHtml(charts[4]!.title),
+    TRUST_CHART_SOURCE: escapeHtml(charts[4]!.sourceText),
+    REACH_CHART_DATA: charts[5]!.data,
+    REACH_CHART_TITLE: escapeHtml(charts[5]!.title),
+    REACH_CHART_SOURCE: escapeHtml(charts[5]!.sourceText),
+    ROADMAP_CHART_DATA: charts[6]!.data,
+    ROADMAP_CHART_TITLE: escapeHtml(charts[6]!.title),
+    ROADMAP_CHART_SOURCE: escapeHtml(charts[6]!.sourceText),
     CONTACT_1_HREF: escapeHtml(contactHref(facts.contacts[0], facts.website)),
     CONTACT_1_TEXT: escapeHtml(facts.contacts[0] ?? facts.website),
     CONTACT_2_HREF: escapeHtml(contactHref(facts.contacts[1], facts.website)),

@@ -23,6 +23,10 @@ EnvironmentFile=/opt/bot-present/.env
 ExecStart=/home/bot/.bun/bin/bun run start
 Restart=always
 RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
 User=bot
 
 [Install]
@@ -49,3 +53,5 @@ bun install --frozen-lockfile
 bun run check
 sudo systemctl restart bot-present
 ```
+
+Проверки должны завершиться успешно до перезапуска сервиса. Не используйте открытый webhook, который выполняет произвольный shell-скрипт без проверки подписи, и не добавляйте в сценарий обновления `git reset --hard`: это может уничтожить локальные изменения. Для автоматического развёртывания используйте подписанный webhook или CI с отдельным SSH-ключом и теми же командами проверки.
