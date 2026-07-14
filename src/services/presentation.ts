@@ -88,6 +88,13 @@ export interface PresentationPreferences {
   sellAiBloggers: boolean;
   productImages: Record<string, string>;
   pageEdits: Record<string, string>;
+  sectionEdits: Record<string, PresentationSectionEdit>;
+}
+
+export interface PresentationSectionEdit {
+  heading?: string;
+  text?: string;
+  imageUrl?: string;
 }
 
 export interface PresentationEditOptions {
@@ -96,6 +103,7 @@ export interface PresentationEditOptions {
   sellAiBloggers?: boolean;
   productImage?: { index: number; url: string };
   pageEdit?: { page: number; text: string };
+  sectionEdit?: { page: number; field: "heading" | "text" | "image" | "all"; value: string };
 }
 
 interface PresentationTheme {
@@ -205,6 +213,7 @@ function defaultPreferences(existing?: Partial<PresentationPreferences>): Presen
     sellAiBloggers: existing?.sellAiBloggers ?? true,
     productImages: { ...(existing?.productImages ?? {}) },
     pageEdits: { ...(existing?.pageEdits ?? {}) },
+    sectionEdits: Object.fromEntries(Object.entries(existing?.sectionEdits ?? {}).map(([page, edit]) => [page, { ...edit }])),
   };
 }
 
@@ -238,6 +247,31 @@ function applyEditOptions(
     const text = clean(options.pageEdit.text, 2000);
     if (!text) delete next.pageEdits[String(options.pageEdit.page)];
     else next.pageEdits[String(options.pageEdit.page)] = text;
+  }
+  if (options?.sectionEdit) {
+    const { page, field } = options.sectionEdit;
+    if (!Number.isInteger(page) || page < 1 || page > 8) {
+      throw new Error("Номер раздела должен быть от 1 до 8.");
+    }
+    const pageKey = String(page);
+    if (field === "all") {
+      delete next.sectionEdits[pageKey];
+      delete next.pageEdits[pageKey];
+    } else {
+      const edit = { ...(next.sectionEdits[pageKey] ?? {}) };
+      if (field === "image") {
+        const value = options.sectionEdit.value.trim();
+        if (value) edit.imageUrl = parsePublicHttpUrl(value).toString();
+        else delete edit.imageUrl;
+      } else {
+        const value = clean(options.sectionEdit.value, field === "heading" ? 240 : 2500);
+        if (value) edit[field] = value;
+        else delete edit[field];
+        if (field === "text") delete next.pageEdits[pageKey];
+      }
+      if (Object.keys(edit).length === 0) delete next.sectionEdits[pageKey];
+      else next.sectionEdits[pageKey] = edit;
+    }
   }
   return next;
 }
@@ -1732,16 +1766,8 @@ export function renderPresentationTemplate(
       : `Каждый ролик связан с реальным направлением сайта ${escapeHtml(facts.companyName)} и не подменяет проверяемые сведения рекламными обещаниями.`,
   };
 
-  const editablePageFields = [
-    "DESCRIPTION", "ABOUT_LEAD", "MARKET_LEAD", "BLOGGER_LEAD",
-    "VIDEO_LEAD", "MATRIX_LEAD", "BENCHMARK_LEAD", "OFFER_LEAD",
-  ] as const;
   for (let page = 1; page <= 8; page += 1) {
-    const edit = preferences.pageEdits[String(page)];
-    values[`PAGE_${page}_EDIT`] = edit
-      ? `<aside class="page-edit"><b>Основной текст страницы ${page} отредактирован пользователем</b></aside>`
-      : "";
-    if (edit) values[editablePageFields[page - 1]!] = escapeHtml(edit);
+    values[`PAGE_${page}_EDIT`] = "";
   }
 
   for (let index = 0; index < 4; index += 1) {
@@ -1780,6 +1806,25 @@ export function renderPresentationTemplate(
     values[`MATRIX_${index + 1}_DESC`] = escapeHtml(preferences.sellAiBloggers
       ? `Сценарий AI-блогера: показать знакомую ситуацию, объяснить ценность «${topic}», снять главное сомнение и привести к обращению.`
       : `Объяснить ценность направления «${topic}», снять главное сомнение и привести читателя к понятному следующему шагу.`);
+  }
+
+  const editableSectionHeadings = [
+    "HEADLINE", "ABOUT_HEADING", "MARKET_HEADING", "TOOLS_HEADING",
+    "VIDEO_HEADING", "PROJECT_SECTIONS_HEADING", "BENCHMARK_NAME", "OFFER_HEADING",
+  ] as const;
+  const editableSectionTexts = [
+    "DESCRIPTION", "ABOUT_LEAD", "MARKET_LEAD", "BLOGGER_LEAD",
+    "VIDEO_LEAD", "MATRIX_LEAD", "BENCHMARK_LEAD", "OFFER_LEAD",
+  ] as const;
+  for (let page = 1; page <= 8; page += 1) {
+    const edit = preferences.sectionEdits[String(page)];
+    const heading = edit?.heading;
+    const text = edit?.text ?? preferences.pageEdits[String(page)];
+    if (heading) values[editableSectionHeadings[page - 1]!] = escapeHtml(heading);
+    if (text) values[editableSectionTexts[page - 1]!] = escapeHtml(text);
+    if (edit?.imageUrl) {
+      values[`PAGE_${page}_EDIT`] = `<figure class="section-edit-image"><img src="${escapeHtml(edit.imageUrl)}" alt="Дополнительное изображение раздела ${page}"></figure>`;
+    }
   }
 
   const html = Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{{${key}}}`, value), template);

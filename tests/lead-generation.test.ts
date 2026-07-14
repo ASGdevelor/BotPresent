@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildLeadSearchQueries,
   extractExplicitUrls,
   extractTelegramContacts,
   formatLeadCsv,
+  formatLeadHtml,
   formatLeadReport,
   inferContactRole,
+  parseBingRssResults,
   parseSearchResults,
   scoreCompany,
 } from "../src/services/lead-generation";
@@ -55,6 +58,42 @@ describe("lead generation parsing", () => {
     const target = Buffer.from("https://company.example/sales", "utf8").toString("base64url");
     const html = `<li class="b_algo"><h2><a href="https://www.bing.com/ck/a?u=a1${target}">Компания</a></h2></li>`;
     expect(parseSearchResults(html)).toEqual(["https://company.example/sales"]);
+  });
+
+  test("parses official sites from Bing RSS", () => {
+    const xml = `<?xml version="1.0"?><rss><channel>
+      <item><title>Acme dental clinic</title><description>Dentistry</description><link>https://acme.example/about</link></item>
+      <item><title>Unrelated download</title><description>Movies</description><link>https://random.example/</link></item>
+      <item><title>Search</title><link>https://www.bing.com/search?q=acme</link></item>
+    </channel></rss>`;
+    expect(parseBingRssResults(xml, ["dental"])).toEqual(["https://acme.example/about"]);
+  });
+
+  test("uses every questionnaire answer in search and applies exclusions", () => {
+    const queries = buildLeadSearchQueries({
+      whoCanBuy: "владельцы сетей клиник",
+      whoToFind: "стоматологические клиники",
+      whereToSearch: "Россия Москва",
+      offer: "AI-видео для записи пациентов",
+      exclusions: "агрегаторы, франшизы",
+    }).join("\n");
+    expect(queries).toContain("владельцы сетей клиник");
+    expect(queries).toContain("стоматологические клиники");
+    expect(queries).toContain("Россия Москва");
+    expect(queries).toContain("AI-видео для записи пациентов");
+    expect(queries).toContain("-агрегаторы");
+    expect(queries).toContain("-франшизы");
+  });
+
+  test("rejects a buyer-only match without target-company evidence", () => {
+    const result = scoreCompany("Владельцы бизнеса и отдел продаж", {
+      whoCanBuy: "владельцы бизнеса",
+      whoToFind: "производители медицинского оборудования",
+      whereToSearch: "Москва",
+      offer: "AI-видео",
+      exclusions: "нет",
+    }, true, 2);
+    expect(result.matchKind).toBe("similar");
   });
 
   test("extracts only public Telegram handles and excludes bots", () => {
@@ -144,9 +183,12 @@ describe("lead generation parsing", () => {
     };
 
     const report = formatLeadReport(result);
+    const html = formatLeadHtml(result);
     expect(report).toContain("Название сайта: example.com");
-    expect(report).toContain("Telegram-контакты: не найдены");
-    expect(report).toContain("Компаний без Telegram-контакта: 1");
+    expect(report).not.toContain("не найдены");
+    expect(report).not.toContain("Telegram-контакты");
+    expect(html).not.toContain(">—<");
+    expect(html).toContain("https://example.com/");
     expect(formatLeadCsv(result)).toContain("Тип совпадения,Релевантность %");
   });
 });

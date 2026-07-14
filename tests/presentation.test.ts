@@ -333,6 +333,29 @@ describe("presentation template", () => {
     expect(html.match(/<svg class="business-chart"/g) ?? []).toHaveLength(7);
   });
 
+  test("applies isolated heading, text and photo overrides to one section", async () => {
+    const template = await readFile(path.resolve(import.meta.dir, "..", "Generic", "index3.html"), "utf8");
+    const html = renderPresentationTemplate(template, facts, undefined, new Date("2026-07-11T00:00:00Z"), {
+      sectionEdits: {
+        "3": {
+          heading: "Новый <заголовок> рынка",
+          text: "Локальный текст только для третьего раздела.",
+          imageUrl: "https://images.example.com/market.jpg",
+        },
+        "5": { heading: "Реалистичные ведущие бренда" },
+      },
+    });
+
+    expect(html).toContain("Новый &lt;заголовок&gt; рынка");
+    expect(html).toContain("Локальный текст только для третьего раздела.");
+    expect(html).toContain("Реалистичные ведущие бренда");
+    expect(html).toContain('class="section-edit-image"');
+    expect(html).toContain('src="https://images.example.com/market.jpg"');
+    expect(html.match(/class="section-edit-image"/g) ?? []).toHaveLength(1);
+    expect(html).toContain("Где Example &amp; Co уже силён");
+    expect(html).not.toMatch(/\{\{[A-Z0-9_]+\}\}/);
+  });
+
   test("uses the user-selected palette in CSS and chart datasets", async () => {
     const template = await readFile(path.resolve(import.meta.dir, "..", "Generic", "index.html"), "utf8");
     const html = renderPresentationTemplate(template, facts, undefined, new Date("2026-07-11T00:00:00Z"), {

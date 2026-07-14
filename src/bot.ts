@@ -1,6 +1,15 @@
 import { Bot, GrammyError, HttpError, InputFile, type Context } from "grammy";
 import { BUTTONS, MENU_TEXT } from "./constants";
-import { createAiBloggersKeyboard, createLeadResultKeyboard, createMainKeyboard, createPresentationKeyboard } from "./keyboard";
+import {
+  createAdvancedFieldKeyboard,
+  createAdvancedSectionKeyboard,
+  createAdvancedValueKeyboard,
+  createAiBloggersKeyboard,
+  createLeadResultKeyboard,
+  createMainKeyboard,
+  createPresentationKeyboard,
+  createPresentationSelectionKeyboard,
+} from "./keyboard";
 import {
   isCompleteLeadCriteria,
   LEAD_PROMPTS,
@@ -26,10 +35,13 @@ import { normalizeTopic, safeFilePart } from "./utils";
 
 interface PresentationSession {
   kind: "presentation";
-  action: "create" | "edit";
-  step?: "website" | "aiMode";
+  action: "create" | "edit" | "advancedEdit";
+  step?: "website" | "aiMode" | "selectRecord" | "selectSection" | "selectField" | "editValue";
   website?: string;
   editOptions?: PresentationEditOptions;
+  recordId?: string;
+  section?: number;
+  field?: "heading" | "text" | "image";
 }
 
 interface LeadGenerationSession {
@@ -213,6 +225,27 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     ].join("\n"));
   });
 
+  bot.hears(BUTTONS.advancedEditPresentation, async (ctx) => {
+    if (!ctx.from) return;
+    const records = await listPresentations(ctx.from.id);
+    if (records.length === 0) {
+      await reply(ctx, "У вас пока нет презентаций.", { reply_markup: createPresentationKeyboard() });
+      return;
+    }
+    sessions.set(sessionKey(ctx.chat.id, ctx.from.id), {
+      kind: "presentation",
+      action: "advancedEdit",
+      step: "selectRecord",
+    });
+    await reply(ctx, [
+      "Выберите ID презентации кнопкой ниже.",
+      "После выбора можно отдельно менять заголовок, основной текст или фотографию любого из восьми разделов.",
+      "Правки сохраняются только для выбранной презентации и не изменяют исходный сайт.",
+      "",
+      presentationListText(records),
+    ].join("\n"), { reply_markup: createPresentationSelectionKeyboard(records) });
+  });
+
   bot.hears(BUTTONS.presentationsFromLeads, async (ctx) => {
     if (!ctx.from) return;
     const key = sessionKey(ctx.chat.id, ctx.from.id);
@@ -271,7 +304,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     });
     await reply(ctx, [
       "Запускаем поиск потенциальных клиентов.",
-      "Как проходит лидогенерация: выполняю расширенный поиск в Google → собираю уникальные сайты компаний выбранной сферы → проверяю страну и домен → анализирую главную, услуги, руководство и контакты → показываю точные и частичные совпадения. Похожие компании исключаются.",
+      "Как проходит лидогенерация: учитываю все ответы анкеты → выполняю расширенный поиск в Google и Bing → собираю уникальные официальные сайты → проверяю сферу, исключения, страну и домен → анализирую главную, руководство и контактные страницы → сохраняю только найденные на сайтах Telegram, контакты руководителей/менеджеров и другие контакты с источниками. Случайные сайты и похожие без подтверждения компании исключаются.",
       "Отвечайте на пять вопросов по одному. Для отмены: /cancel",
       "",
       LEAD_PROMPTS.whoCanBuy,
@@ -288,7 +321,8 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
     }
 
     if (session.kind === "presentation") {
-      const input = normalizeTopic(ctx.message.text);
+      const rawInput = ctx.message.text.replace(/\r\n/g, "\n").trim();
+      const input = session.action === "create" ? normalizeTopic(rawInput) : rawInput.slice(0, 3000);
       if (input.length < 3 && !(session.action === "create" && session.step === "aiMode")) {
         await reply(ctx, "Адрес или ID слишком короткий.");
         return;
@@ -296,6 +330,131 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
       let website = session.website ?? input;
       let recordId: string | undefined;
       let editOptions: PresentationEditOptions | undefined = session.editOptions;
+      if (session.action === "advancedEdit") {
+        if (input === BUTTONS.advancedDone) {
+          sessions.delete(key);
+          await reply(ctx, "Расширенное изменение завершено.", { reply_markup: createPresentationKeyboard() });
+          return;
+        }
+
+        const records = await listPresentations(ctx.from.id);
+        if (session.step === "selectRecord") {
+          const selectedId = input.match(/^ID\s+(\S+)$/i)?.[1] ?? input;
+          const selected = records.find((record) => record.id === selectedId);
+          if (!selected) {
+            await reply(ctx, "Выберите существующий ID кнопкой из списка.", { reply_markup: createPresentationSelectionKeyboard(records) });
+            return;
+          }
+          session.recordId = selected.id;
+          session.website = selected.website;
+          session.step = "selectSection";
+          sessions.set(key, session);
+          await reply(ctx, `Выбрана презентация ${selected.id} — ${selected.companyName}. Теперь выберите раздел.`, {
+            reply_markup: createAdvancedSectionKeyboard(),
+          });
+          return;
+        }
+
+        const selected = records.find((record) => record.id === session.recordId);
+        if (!selected) {
+          session.step = "selectRecord";
+          delete session.recordId;
+          delete session.website;
+          sessions.set(key, session);
+          await reply(ctx, "Выбранная презентация больше не найдена. Выберите другую.", {
+            reply_markup: createPresentationSelectionKeyboard(records),
+          });
+          return;
+        }
+        recordId = selected.id;
+        website = selected.website;
+
+        if (session.step === "selectSection") {
+          const page = Number(input.match(/^Раздел\s+([1-8])$/i)?.[1]);
+          if (!Number.isInteger(page) || page < 1 || page > 8) {
+            await reply(ctx, "Выберите один из разделов 1–8 кнопкой ниже.", { reply_markup: createAdvancedSectionKeyboard() });
+            return;
+          }
+          session.section = page;
+          session.step = "selectField";
+          sessions.set(key, session);
+          await reply(ctx, `Раздел ${page}. Что изменить локально?`, { reply_markup: createAdvancedFieldKeyboard() });
+          return;
+        }
+
+        if (session.step === "selectField") {
+          if (input === BUTTONS.advancedBackToSections) {
+            session.step = "selectSection";
+            delete session.section;
+            delete session.field;
+            sessions.set(key, session);
+            await reply(ctx, "Выберите раздел.", { reply_markup: createAdvancedSectionKeyboard() });
+            return;
+          }
+          if (!session.section) {
+            session.step = "selectSection";
+            sessions.set(key, session);
+            await reply(ctx, "Сначала выберите раздел.", { reply_markup: createAdvancedSectionKeyboard() });
+            return;
+          }
+          if (input === BUTTONS.advancedClearSection) {
+            editOptions = { sectionEdit: { page: session.section, field: "all", value: "" } };
+          } else {
+            const field = input === BUTTONS.advancedHeading
+              ? "heading"
+              : input === BUTTONS.advancedText
+                ? "text"
+                : input === BUTTONS.advancedImage ? "image" : undefined;
+            if (!field) {
+              await reply(ctx, "Выберите тип правки кнопкой ниже.", { reply_markup: createAdvancedFieldKeyboard() });
+              return;
+            }
+            session.field = field;
+            session.step = "editValue";
+            sessions.set(key, session);
+            const prompt = field === "heading"
+              ? "Отправьте новый заголовок раздела."
+              : field === "text"
+                ? "Отправьте новый основной текст раздела одним сообщением."
+                : "Отправьте публичную HTTPS-ссылку на новое фото раздела.";
+            await reply(ctx, `${prompt}\nЧтобы удалить только это поле, нажмите «${BUTTONS.advancedClearValue}».`, {
+              reply_markup: createAdvancedValueKeyboard(),
+            });
+            return;
+          }
+        } else if (session.step === "editValue") {
+          if (input === BUTTONS.advancedBackToFields) {
+            session.step = "selectField";
+            delete session.field;
+            sessions.set(key, session);
+            await reply(ctx, `Раздел ${session.section}. Выберите тип правки.`, { reply_markup: createAdvancedFieldKeyboard() });
+            return;
+          }
+          if (!session.section || !session.field) {
+            session.step = "selectSection";
+            delete session.field;
+            sessions.set(key, session);
+            await reply(ctx, "Сначала выберите раздел.", { reply_markup: createAdvancedSectionKeyboard() });
+            return;
+          }
+          const value = input === BUTTONS.advancedClearValue ? "" : input;
+          if (session.field === "image" && value && !/^https:\/\/\S+$/i.test(value)) {
+            await reply(ctx, "Для фотографии нужна публичная ссылка, начинающаяся с https://.", {
+              reply_markup: createAdvancedValueKeyboard(),
+            });
+            return;
+          }
+          editOptions = { sectionEdit: { page: session.section, field: session.field, value } };
+          session.step = "selectField";
+          delete session.field;
+          sessions.set(key, session);
+        } else {
+          session.step = "selectSection";
+          sessions.set(key, session);
+          await reply(ctx, "Выберите раздел.", { reply_markup: createAdvancedSectionKeyboard() });
+          return;
+        }
+      }
       if (session.action === "create") {
         if (session.step === "aiMode") {
           const yes = input === BUTTONS.aiBloggersYes || /^(?:да|yes|прода[её]м|ai)$/i.test(input);
@@ -383,7 +542,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
         if (session.action === "create") sessions.delete(key);
         await ctx.replyWithDocument(new InputFile(record.htmlPath, `${safeFilePart(record.companyName)}-index.html`), {
           caption: `${record.companyName} — HTML`,
-          reply_markup: createPresentationKeyboard(),
+          reply_markup: session.action === "advancedEdit" ? createAdvancedFieldKeyboard() : createPresentationKeyboard(),
         });
         if (record.pdfPath) {
           await ctx.replyWithDocument(new InputFile(record.pdfPath, `${safeFilePart(record.companyName)}.pdf`), {
@@ -398,6 +557,10 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
           await reply(ctx, `Правка применена. Можно отправить следующую команду для ${record.id}. Тема: ${record.preferences?.themeId}; шрифт: ${record.preferences?.fontFamily}.`, {
             reply_markup: createPresentationKeyboard(),
           });
+        } else if (session.action === "advancedEdit") {
+          await reply(ctx, `Локальная правка раздела ${session.section} применена к презентации ${record.id}. Можно изменить другое поле этого раздела или вернуться к списку разделов.`, {
+            reply_markup: createAdvancedFieldKeyboard(),
+          });
         }
         recordHistory(ctx, "bot", `[Презентация: ${record.id}; сайт: ${record.website}]`);
       } catch (error) {
@@ -409,7 +572,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
           `Презентация не создана\nОшибка:${details || " неизвестная ошибка"}`,
         ).catch(() => undefined);
         await reply(ctx, `Не удалось получить данные сайта или создать презентацию.${details}`, {
-          reply_markup: createPresentationKeyboard(),
+          reply_markup: session.action === "advancedEdit" ? createAdvancedFieldKeyboard() : createPresentationKeyboard(),
         });
       }
 

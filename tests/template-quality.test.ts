@@ -85,8 +85,9 @@ describe("Generic template visual and data quality", () => {
     expect($("canvas")).toHaveLength(7);
     expect(html).toContain("<!-- BOT_PRESENT_CHART_JS -->");
     expect(html).not.toContain("cdn.jsdelivr.net");
-    expect(html).not.toContain("NaN");
-    expect(html).not.toContain("Infinity");
+    const markupWithoutEmbeddedMedia = html.replace(/data:image\/gif;base64,[A-Za-z0-9+/=]+/g, "data:image/gif;base64,MEDIA");
+    expect(markupWithoutEmbeddedMedia).not.toContain("NaN");
+    expect(markupWithoutEmbeddedMedia).not.toContain("Infinity");
     expect(html).not.toContain("≈");
     expect(html).not.toContain("businessValueLabels");
     expect($("svg.business-chart .svg-value")).toHaveLength(0);

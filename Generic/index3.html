@@ -59,6 +59,7 @@
     .cis-panel{margin-top:28px;padding:24px;border:1px solid var(--line);border-radius:22px;background:color-mix(in srgb,var(--primary) 7%,var(--paper))}.cis-panel h3{font-size:20px}.cis-panel>p{max-width:820px;margin-top:7px;color:var(--muted);font-size:13.5px}.cis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:17px}.cis-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}.cis-card b{display:block;color:var(--primary);font-size:13px}.cis-card span{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
     .contacts{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}.contacts h3{font-size:14px}.contact-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.contact-pill{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:13px;font-weight:850;text-decoration:none}.contact-placeholder{margin-top:12px;padding:13px 15px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:12px}
     .page-edit{margin-top:18px;padding:14px 16px;border:2px dashed var(--primary);border-radius:14px;background:var(--soft);color:var(--ink)}
+    .section-edit-image{margin-top:24px;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--paper);box-shadow:0 16px 38px rgba(0,0,0,.1)}.section-edit-image img{display:block;width:100%;height:clamp(220px,34vw,420px);object-fit:cover}.hero>.section-edit-image{grid-column:1/-1}
     .footer{display:flex;justify-content:space-between;gap:16px;margin-top:70px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px}
     @media(max-width:900px){.hero,.proof{grid-template-columns:1fr}.hero-card{max-width:560px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.dash2{grid-template-columns:1fr}.deliverables,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.phone-grid{grid-template-columns:1fr;max-width:430px}.competitor-grid,.cis-grid{grid-template-columns:1fr}.section-head{display:block}}
     @media(max-width:640px){.wrap{width:100%;max-width:100%;padding:20px 16px 76px}.topbar{align-items:flex-start}.brand-copy,.stamp{display:none}.nav{max-width:100%;margin-bottom:38px}.hero{width:100%;max-width:100%;gap:24px}.hero>*,.hero-copy,.kpis{width:100%;min-width:0;max-width:100%}.hero h1,.hero .lead{max-width:100%;overflow-wrap:anywhere;word-break:normal}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cards,.vs,.deliverables,.steps,.proof-metrics,.bigm{grid-template-columns:1fr}.section,.avatar-stage{margin-top:74px}.avatar-stage,.offer{padding:29px 19px}.lead{font-size:16px}.cv{height:300px}.chartcard{padding:21px}.footer{display:block}.footer span{display:block;margin-top:6px}}
@@ -116,7 +117,7 @@
 
   <section class="section" id="pain" data-page="4">
     <div class="eyebrow">Шаг 3 · почему обычные блогеры — это боль</div>
-    <h2>Креатор нужен бренду как канал. Но зависимость от одного человека мешает масштабу.</h2><p class="lead">{{BLOGGER_LEAD}}</p>
+    <h2>{{TOOLS_HEADING}}</h2><p class="lead">{{BLOGGER_LEAD}}</p>
     <div class="vs"><div class="vscol old"><h4>{{FORMAT_OLD_TITLE}}</h4>{{LIVE_BLOGGER_CONS}}</div><div class="vscol new"><h4>{{FORMAT_NEW_TITLE}}</h4>{{AI_BLOGGER_PROS}}</div></div>
     <div class="dash2" style="margin-top:16px">
       <article class="chartcard"><h3>{{ECONOMY_CHART_TITLE}}</h3><div class="cap">{{ECONOMY_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="economy"><canvas class="interactive-chart" id="chartEconomy" aria-label="Экономика производства"></canvas><div class="chart-fallback">{{ECONOMY_CHART_SVG}}</div></div><script type="application/json" id="chartEconomyData">{{ECONOMY_CHART_DATA}}</script></article>
@@ -125,7 +126,7 @@
   </section>
 
   <section class="avatar-stage" id="video" data-page="5">
-    <div class="eyebrow">Шаг 4 · что получает бренд</div><h2>GIF · первые AI-блогеры для {{COMPANY}}</h2><p class="lead">{{VIDEO_LEAD}}</p>
+    <div class="eyebrow">Шаг 4 · что получает бренд</div><h2>{{VIDEO_HEADING}}</h2><p class="lead">{{VIDEO_LEAD}}</p>
     <div class="deliverables"><div class="deliverable"><b>3 GIF</b><span>тематические роли для воронки</span></div><div class="deliverable"><b>12</b><span>сценариев первой серии</span></div><div class="deliverable"><b>9:16</b><span>готово для short video</span></div><div class="deliverable"><b>1</b><span>палитра и бренд-код</span></div></div>
     <div class="phone-grid">
       <article class="phone"><div class="phone-screen">{{VIDEO_1_MEDIA}}<div class="phone-top"><span class="phone-tag">{{VIDEO_1_TAG}}</span><span>{{VIDEO_ROLE_1}}</span></div></div><div class="phone-caption"><b>{{VIDEO_1_TITLE}}</b><span>{{VIDEO_1_DESC}}</span></div></article>
@@ -141,7 +142,7 @@
   </section>
 
   <section class="section" id="proof" data-page="7">
-    <div class="eyebrow">Шаг 6 · так это уже работает</div><h2>Лица создают доверие. Сеть лиц превращает его в управляемый канал.</h2><p class="lead">{{BENCHMARK_LEAD}}</p>
+    <div class="eyebrow">Шаг 6 · так это уже работает</div><h2>{{BENCHMARK_NAME}}</h2><p class="lead">{{BENCHMARK_LEAD}}</p>
     <div class="proof" style="margin-top:24px">
       <article class="chartcard"><h3>{{TRUST_CHART_TITLE}}</h3><div class="cap">{{TRUST_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="trust"><canvas class="interactive-chart" id="chartTrust" aria-label="Факторы доверия"></canvas><div class="chart-fallback">{{TRUST_CHART_SVG}}</div></div><script type="application/json" id="chartTrustData">{{TRUST_CHART_DATA}}</script></article>
       <article class="chartcard"><h3>{{REACH_CHART_TITLE}}</h3><div class="cap">{{REACH_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="reach"><canvas class="interactive-chart" id="chartReach" aria-label="Потенциал охвата"></canvas><div class="chart-fallback">{{REACH_CHART_SVG}}</div></div><script type="application/json" id="chartReachData">{{REACH_CHART_DATA}}</script></article>
