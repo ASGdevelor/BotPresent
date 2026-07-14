@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>{{COMPANY}} — персональный разбор AI-блогеров</title>
+  <meta name="description" content="{{DESCRIPTION}}">
+  <meta property="og:title" content="{{COMPANY}} — персональный разбор AI-блогеров">
+  <meta property="og:description" content="{{DESCRIPTION}}">
+  <meta property="og:image" content="{{LOGO_URL}}">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --primary:{{PRIMARY_COLOR}};--secondary:{{SECONDARY_COLOR}};
+      --bg:{{THEME_BACKGROUND}};--bg-end:{{THEME_BACKGROUND_END}};
+      --ink:{{THEME_INK}};--muted:{{THEME_MUTED}};--line:{{THEME_LINE}};
+      --soft:{{THEME_SOFT}};--paper:{{THEME_PAPER}};--panel:{{THEME_PANEL}};
+      --success:#41d18b;--warning:#ffbc5b;--danger:#ef6f74;
+      --font:"{{FONT_FAMILY}}",Arial,sans-serif;
+    }
+    html{scroll-behavior:smooth;background:var(--bg)}
+    body{min-width:320px;background:radial-gradient(circle at 8% 0,color-mix(in srgb,var(--primary) 12%,transparent),transparent 30%),linear-gradient(180deg,var(--bg),var(--bg-end) 760px);color:var(--ink);font:16px/1.58 var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    a{color:inherit}.wrap{width:min(1180px,100%);margin:0 auto;padding:34px 32px 120px}
+    .eyebrow{font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--primary)}
+    h1{max-width:820px;margin:10px 0 20px;font-size:clamp(40px,5vw,66px);font-weight:950;line-height:1.01;letter-spacing:-.045em;overflow-wrap:anywhere}
+    h1 em{font-style:normal;color:var(--primary)}
+    h2{max-width:900px;margin:8px 0 12px;font-size:clamp(29px,3.5vw,42px);font-weight:950;line-height:1.08;letter-spacing:-.035em}
+    h3{font-size:17px;line-height:1.25}.lead{max-width:860px;color:var(--muted);font-size:18px;line-height:1.6;overflow-wrap:anywhere}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:13px;min-width:0}.logo{display:flex;width:152px;height:48px;align-items:center;justify-content:center;padding:8px 12px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(0,0,0,.08)}
+    .logo img{display:block;max-width:100%;max-height:100%}.brand-copy{min-width:0}.brand-copy b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.brand-copy span{display:block;color:var(--muted);font-size:12px}
+    .stamp{padding:9px 14px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--muted);font-size:12px;white-space:nowrap}
+    .nav{position:sticky;top:10px;z-index:20;display:flex;gap:8px;align-items:center;margin-bottom:52px;padding:10px;border:1px solid var(--line);border-radius:18px;background:color-mix(in srgb,var(--paper) 90%,transparent);box-shadow:0 14px 38px rgba(0,0,0,.08);backdrop-filter:blur(14px);overflow:auto}
+    .nav a{flex:0 0 auto;padding:7px 11px;border-radius:10px;color:var(--muted);font-size:12px;font-weight:850;text-decoration:none}.nav a:first-child{background:var(--panel);color:#fff}.nav a:hover{background:var(--soft);color:var(--ink)}
+    section{scroll-margin-top:92px}.section{margin-top:104px}.hero{display:grid;grid-template-columns:minmax(0,1.15fr) 390px;gap:42px;align-items:center}
+    .hero-copy>.lead{max-width:760px}.signal{display:inline-flex;align-items:center;gap:8px;margin-top:24px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--muted);font-size:12px;font-weight:800}.signal:before{content:"";width:9px;height:9px;border-radius:50%;background:var(--success);box-shadow:0 0 0 5px rgba(65,209,139,.14)}
+    .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:28px}.kpi{min-height:116px;padding:17px;background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.06)}
+    .kpi .n{font-size:34px;font-weight:950;line-height:1;letter-spacing:-.04em;color:var(--primary)}.kpi .l{margin-top:9px;color:var(--muted);font-size:12px;line-height:1.35}
+    .hero-card{position:relative;overflow:hidden;padding:22px;border:1px solid var(--line);border-radius:28px;background:linear-gradient(150deg,var(--paper),var(--soft));box-shadow:0 28px 70px rgba(0,0,0,.13)}
+    .hero-card:after{content:"";position:absolute;right:-60px;top:-70px;width:190px;height:190px;border-radius:50%;background:var(--secondary);opacity:.5}.hero-card>*{position:relative;z-index:1}
+    .hero-card .mini{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:900}.hero-card h3{margin:10px 0 18px;font-size:24px;letter-spacing:-.03em}
+    .brand-visual{display:flex;align-items:center;justify-content:center;height:118px;padding:20px;border-radius:20px;background:var(--paper);border:1px solid var(--line)}.brand-visual img{max-width:78%;max-height:72px}
+    .flow{display:grid;gap:8px;margin-top:14px}.flow div{display:flex;justify-content:space-between;gap:15px;padding:11px 12px;border-radius:12px;background:var(--soft);font-size:12px}.flow b{color:var(--primary)}
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-top:24px}.card{min-height:172px;padding:22px;border:1px solid var(--line);border-radius:20px;background:var(--paper);box-shadow:0 10px 28px rgba(0,0,0,.055)}
+    .card:before{content:"";display:block;width:34px;height:5px;margin-bottom:18px;border-radius:99px;background:var(--primary)}.card .ctitle{font-size:17px;font-weight:900}.card .cwhat{margin-top:9px;color:var(--muted);font-size:13.5px}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:22px;margin-bottom:24px}.section-head .lead{max-width:680px}
+    .dash2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.chartcard{position:relative;overflow:hidden;padding:26px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(150deg,var(--paper),var(--soft));box-shadow:0 16px 38px rgba(0,0,0,.08)}
+    .chartcard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:linear-gradient(180deg,var(--primary),var(--secondary))}.chartcard h3{padding-left:5px;font-size:19px}.chartcard .cap{min-height:42px;margin:8px 0 14px;padding-left:5px;color:var(--muted);font-size:13px;line-height:1.48;overflow-wrap:anywhere}.cv{height:350px}.chartviz{position:relative;min-width:0}.interactive-chart{display:none;width:100%!important;height:100%!important}.chart-fallback{height:100%}.chartviz.chart-ready .interactive-chart{display:block}.chartviz.chart-ready .chart-fallback{display:none}
+    .business-chart{display:block;width:100%;height:100%;overflow:visible;color:var(--ink)}.business-chart .svg-label{fill:var(--ink);font:750 14px var(--font)}.business-chart .svg-track{fill:var(--line);opacity:.72}.business-chart .svg-hole{fill:var(--paper)}.business-chart .svg-caption{fill:var(--muted);font:750 12px var(--font)}
+    .note{margin-top:17px;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--soft);color:var(--muted);font-size:13.5px}.note b{color:var(--ink)}
+    .vs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:24px}.vscol{padding:23px;border:1px solid var(--line);border-radius:22px;background:var(--paper)}.vscol.new{background:linear-gradient(155deg,var(--panel),color-mix(in srgb,var(--panel) 78%,var(--primary)));color:#fff}.vscol h4{margin-bottom:15px;font-size:17px}.vli{display:flex;gap:10px;margin:11px 0;font-size:13.5px;line-height:1.45}.vscol.old .vli{color:var(--muted)}.vscol.new .vli{color:#f4f7ff}.vli .ic{font-weight:950}
+    .avatar-stage{position:relative;overflow:hidden;margin-top:104px;padding:44px;border-radius:32px;background:radial-gradient(circle at 92% 8%,color-mix(in srgb,var(--secondary) 48%,transparent),transparent 32%),linear-gradient(145deg,color-mix(in srgb,var(--panel) 82%,var(--primary)),color-mix(in srgb,var(--primary) 58%,var(--panel)));color:#fff;box-shadow:0 30px 80px color-mix(in srgb,var(--primary) 24%,transparent)}
+    .avatar-stage .eyebrow,.avatar-stage h2{color:#fff}.avatar-stage .lead{color:color-mix(in srgb,#fff 82%,var(--secondary))}.deliverables{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:24px 0}.deliverable{padding:14px;border:1px solid color-mix(in srgb,var(--secondary) 42%,transparent);border-radius:15px;background:color-mix(in srgb,var(--secondary) 14%,transparent)}.deliverable b{display:block;color:color-mix(in srgb,#fff 72%,var(--secondary));font-size:21px}.deliverable span{display:block;margin-top:4px;color:color-mix(in srgb,#fff 78%,var(--secondary));font-size:11.5px}
+    .phone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.phone{padding:12px;border:1px solid color-mix(in srgb,var(--secondary) 38%,transparent);border-radius:31px;background:color-mix(in srgb,var(--panel) 82%,var(--primary));box-shadow:0 22px 48px color-mix(in srgb,var(--panel) 72%,transparent)}.phone-screen{position:relative;overflow:hidden;aspect-ratio:9/16;border-radius:23px;background:linear-gradient(145deg,var(--primary),color-mix(in srgb,var(--panel) 70%,var(--secondary)));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--secondary) 34%,transparent)}.phone-screen img,.phone-screen video{display:block;width:100%;height:100%;object-fit:cover}.ai-blogger-gif{background:var(--primary);image-rendering:auto}.phone-top{position:absolute;z-index:2;left:11px;right:11px;top:11px;display:flex;justify-content:space-between;gap:8px;color:#fff;font-size:10.5px;font-weight:900;text-shadow:0 2px 8px var(--panel)}.phone-tag{padding:6px 8px;border:1px solid color-mix(in srgb,var(--secondary) 45%,transparent);border-radius:999px;background:color-mix(in srgb,var(--primary) 72%,var(--panel));backdrop-filter:blur(8px)}.phone-caption{padding:14px 5px 5px}.phone-caption b{display:block;font-size:16px}.phone-caption span{display:block;margin-top:6px;color:color-mix(in srgb,#fff 78%,var(--secondary));font-size:12.5px;line-height:1.45}.video-note{margin-top:19px;padding:17px 19px;border:1px solid color-mix(in srgb,var(--secondary) 38%,transparent);border-radius:16px;background:color-mix(in srgb,var(--secondary) 13%,transparent);color:color-mix(in srgb,#fff 84%,var(--secondary));font-size:13.5px}
+    .steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-top:24px}.stp{min-height:190px;padding:20px;border:1px solid var(--line);border-radius:19px;background:var(--paper)}.sn{display:flex;width:34px;height:34px;align-items:center;justify-content:center;margin-bottom:18px;border-radius:11px;background:var(--panel);color:#fff;font-size:13px;font-weight:950}.st{font-weight:900}.sd{margin-top:7px;color:var(--muted);font-size:13px}
+    .proof{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:stretch}.proof>.chartcard{height:100%}
+    .competitor-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.competitor{padding:17px;border:1px solid var(--line);border-radius:17px;background:var(--paper)}.competitor-no{font-size:10px;font-weight:900;color:var(--primary);letter-spacing:.1em}.competitor h3{margin:6px 0}.competitor p{color:var(--muted);font-size:12px}.competitor-move{margin-top:8px;color:var(--primary);font-size:11px;font-weight:850}
+    .offer{position:relative;overflow:hidden;padding:40px;border:1px solid var(--line);border-radius:30px;background:linear-gradient(145deg,var(--paper),var(--soft));box-shadow:0 28px 70px rgba(0,0,0,.12)}.bigm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:26px 0}.bigm>div{padding:18px;border:1px solid var(--line);border-radius:17px;background:var(--paper)}.bigm .n{font-size:35px;font-weight:950;line-height:1;color:var(--primary)}.bigm .l{margin-top:8px;color:var(--muted);font-size:12px}.cta{display:inline-flex;align-items:center;justify-content:center;padding:15px 24px;border-radius:14px;background:var(--panel);color:#fff;font-size:15px;font-weight:950;text-decoration:none;box-shadow:0 14px 30px rgba(0,0,0,.18)}
+    .cis-panel{margin-top:28px;padding:24px;border:1px solid var(--line);border-radius:22px;background:color-mix(in srgb,var(--primary) 7%,var(--paper))}.cis-panel h3{font-size:20px}.cis-panel>p{max-width:820px;margin-top:7px;color:var(--muted);font-size:13.5px}.cis-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:17px}.cis-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--paper)}.cis-card b{display:block;color:var(--primary);font-size:13px}.cis-card span{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+    .contacts{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}.contacts h3{font-size:14px}.contact-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.contact-pill{padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--paper);font-size:13px;font-weight:850;text-decoration:none}.contact-placeholder{margin-top:12px;padding:13px 15px;border:1px dashed var(--line);border-radius:13px;color:var(--muted);font-size:12px}
+    .page-edit{margin-top:18px;padding:14px 16px;border:2px dashed var(--primary);border-radius:14px;background:var(--soft);color:var(--ink)}
+    .footer{display:flex;justify-content:space-between;gap:16px;margin-top:70px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px}
+    @media(max-width:900px){.hero,.proof{grid-template-columns:1fr}.hero-card{max-width:560px}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.dash2{grid-template-columns:1fr}.deliverables,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}.phone-grid{grid-template-columns:1fr;max-width:430px}.competitor-grid,.cis-grid{grid-template-columns:1fr}.section-head{display:block}}
+    @media(max-width:640px){.wrap{width:100%;max-width:100%;padding:20px 16px 76px}.topbar{align-items:flex-start}.brand-copy,.stamp{display:none}.nav{max-width:100%;margin-bottom:38px}.hero{width:100%;max-width:100%;gap:24px}.hero>*,.hero-copy,.kpis{width:100%;min-width:0;max-width:100%}.hero h1,.hero .lead{max-width:100%;overflow-wrap:anywhere;word-break:normal}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cards,.vs,.deliverables,.steps,.proof-metrics,.bigm{grid-template-columns:1fr}.section,.avatar-stage{margin-top:74px}.avatar-stage,.offer{padding:29px 19px}.lead{font-size:16px}.cv{height:300px}.chartcard{padding:21px}.footer{display:block}.footer span{display:block;margin-top:6px}}
+    @media(max-width:390px){h1{font-size:36px}.kpi{min-height:105px;padding:14px}.kpi .n{font-size:30px}.nav{border-radius:14px}.logo{width:138px}}
+    @media print{html,body{min-height:0}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <header class="topbar">
+    <div class="brand"><div class="logo"><img src="{{LOGO_URL}}" alt="{{COMPANY}}"></div><div class="brand-copy"><b>{{COMPANY}}</b><span>{{INDUSTRY}} · {{GENERATED_AT}}</span></div></div>
+    <div class="stamp">{{WEBSITE}}</div>
+  </header>
+  <nav class="nav" aria-label="Содержание">
+    <a href="#intro">Разбор</a><a href="#studied">Что изучено</a><a href="#buyers">Покупатели</a><a href="#pain">Блогеры</a><a href="#video">AI-видео</a><a href="#series">Пилот</a><a href="#proof">Рынок</a><a href="#offer">Предложение</a>
+  </nav>
+
+  <section class="hero" id="intro" data-page="1">
+    <div class="hero-copy">
+      <div class="eyebrow">Персональный разбор · {{COMPANY}}</div>
+      <h1>{{HEADLINE}}</h1>
+      <p class="lead">{{DESCRIPTION}}</p>
+      <div class="signal">Разбор собран по публичным материалам бренда и открытым рыночным данным</div>
+      <div class="kpis">{{KPI_1}}{{KPI_2}}{{KPI_3}}{{KPI_4}}</div>
+    </div>
+    <aside class="hero-card">
+      <div class="mini">Модель продвижения</div><h3>Один бренд → сеть управляемых лиц</h3>
+      <div class="brand-visual"><img src="{{LOGO_URL}}" alt="Логотип {{COMPANY}}"></div>
+      <div class="flow"><div><span>Экспертиза бренда</span><b>01</b></div><div><span>Сценарии под сегменты</span><b>02</b></div><div><span>Серийный контент</span><b>03</b></div></div>
+    </aside>
+    {{PAGE_1_EDIT}}
+  </section>
+
+  <section class="section" id="studied" data-page="2">
+    <div class="eyebrow">Шаг 1 · что я изучил</div>
+    <h2>{{ABOUT_HEADING}}</h2><p class="lead">{{ABOUT_LEAD}}</p>
+    <div class="cards">
+      <article class="card"><div class="ctitle">{{ABOUT_1_TITLE}}</div><div class="cwhat">{{ABOUT_1_DESC}}</div></article>
+      <article class="card"><div class="ctitle">{{ABOUT_2_TITLE}}</div><div class="cwhat">{{ABOUT_2_DESC}}</div></article>
+      <article class="card"><div class="ctitle">{{ABOUT_3_TITLE}}</div><div class="cwhat">{{ABOUT_3_DESC}}</div></article>
+      <article class="card"><div class="ctitle">{{ABOUT_4_TITLE}}</div><div class="cwhat">{{ABOUT_4_DESC}}</div></article>
+      <article class="card"><div class="ctitle">{{ABOUT_5_TITLE}}</div><div class="cwhat">{{ABOUT_5_DESC}}</div></article>
+      <article class="card"><div class="ctitle">{{ABOUT_6_TITLE}}</div><div class="cwhat">{{ABOUT_6_DESC}}</div></article>
+    </div>{{PAGE_2_EDIT}}
+  </section>
+
+  <section class="section" id="buyers" data-page="3">
+    <div class="eyebrow">Шаг 2 · разбор ниши покупателей</div>
+    <div class="section-head"><div><h2>{{MARKET_HEADING}}</h2><p class="lead">{{MARKET_LEAD}}</p></div></div>
+    <div class="dash2">
+      <article class="chartcard"><h3>{{MARKET_CHART_TITLE}}</h3><div class="cap">{{MARKET_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="market"><canvas class="interactive-chart" id="chartMarket" aria-label="Рыночные показатели"></canvas><div class="chart-fallback">{{MARKET_CHART_SVG}}</div></div><script type="application/json" id="chartMarketData">{{MARKET_CHART_DATA}}</script></article>
+      <article class="chartcard"><h3>{{CHANNEL_CHART_TITLE}}</h3><div class="cap">{{CHANNEL_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="audience"><canvas class="interactive-chart" id="chartAudience" aria-label="Структура аудитории"></canvas><div class="chart-fallback">{{CHANNEL_CHART_SVG}}</div></div><script type="application/json" id="chartAudienceData">{{CHANNEL_CHART_DATA}}</script></article>
+    </div><div class="note"><b>{{MARKET_NOTE_TITLE}}</b> {{MARKET_NOTE_TEXT}}</div>{{PAGE_3_EDIT}}
+  </section>
+
+  <section class="section" id="pain" data-page="4">
+    <div class="eyebrow">Шаг 3 · почему обычные блогеры — это боль</div>
+    <h2>Креатор нужен бренду как канал. Но зависимость от одного человека мешает масштабу.</h2><p class="lead">{{BLOGGER_LEAD}}</p>
+    <div class="vs"><div class="vscol old"><h4>{{FORMAT_OLD_TITLE}}</h4>{{LIVE_BLOGGER_CONS}}</div><div class="vscol new"><h4>{{FORMAT_NEW_TITLE}}</h4>{{AI_BLOGGER_PROS}}</div></div>
+    <div class="dash2" style="margin-top:16px">
+      <article class="chartcard"><h3>{{ECONOMY_CHART_TITLE}}</h3><div class="cap">{{ECONOMY_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="economy"><canvas class="interactive-chart" id="chartEconomy" aria-label="Экономика производства"></canvas><div class="chart-fallback">{{ECONOMY_CHART_SVG}}</div></div><script type="application/json" id="chartEconomyData">{{ECONOMY_CHART_DATA}}</script></article>
+      <article class="chartcard"><h3>{{VOLUME_CHART_TITLE}}</h3><div class="cap">{{VOLUME_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="volume"><canvas class="interactive-chart" id="chartVolume" aria-label="Объём контента"></canvas><div class="chart-fallback">{{VOLUME_CHART_SVG}}</div></div><script type="application/json" id="chartVolumeData">{{VOLUME_CHART_DATA}}</script></article>
+    </div>{{PAGE_4_EDIT}}
+  </section>
+
+  <section class="avatar-stage" id="video" data-page="5">
+    <div class="eyebrow">Шаг 4 · что получает бренд</div><h2>GIF · первые AI-блогеры для {{COMPANY}}</h2><p class="lead">{{VIDEO_LEAD}}</p>
+    <div class="deliverables"><div class="deliverable"><b>3 GIF</b><span>тематические роли для воронки</span></div><div class="deliverable"><b>12</b><span>сценариев первой серии</span></div><div class="deliverable"><b>9:16</b><span>готово для short video</span></div><div class="deliverable"><b>1</b><span>палитра и бренд-код</span></div></div>
+    <div class="phone-grid">
+      <article class="phone"><div class="phone-screen">{{VIDEO_1_MEDIA}}<div class="phone-top"><span class="phone-tag">{{VIDEO_1_TAG}}</span><span>{{VIDEO_ROLE_1}}</span></div></div><div class="phone-caption"><b>{{VIDEO_1_TITLE}}</b><span>{{VIDEO_1_DESC}}</span></div></article>
+      <article class="phone"><div class="phone-screen">{{VIDEO_2_MEDIA}}<div class="phone-top"><span class="phone-tag">{{VIDEO_2_TAG}}</span><span>{{VIDEO_ROLE_2}}</span></div></div><div class="phone-caption"><b>{{VIDEO_2_TITLE}}</b><span>{{VIDEO_2_DESC}}</span></div></article>
+      <article class="phone"><div class="phone-screen">{{VIDEO_3_MEDIA}}<div class="phone-top"><span class="phone-tag">{{VIDEO_3_TAG}}</span><span>{{VIDEO_ROLE_3}}</span></div></div><div class="phone-caption"><b>{{VIDEO_3_TITLE}}</b><span>{{VIDEO_3_DESC}}</span></div></article>
+    </div><div class="video-note"><b>{{VIDEO_NOTE_TITLE}}</b> {{VIDEO_NOTE}}</div>{{PAGE_5_EDIT}}
+  </section>
+
+  <section class="section" id="series" data-page="6">
+    <div class="eyebrow">Шаг 5 · первая серия под вашу сеть</div><h2>{{PROJECT_SECTIONS_HEADING}}</h2><p class="lead">{{MATRIX_LEAD}}</p>
+    <div class="steps"><article class="stp"><div class="sn">01</div><div class="st">{{MATRIX_1_TITLE}}</div><div class="sd">{{MATRIX_1_DESC}}</div></article><article class="stp"><div class="sn">02</div><div class="st">{{MATRIX_2_TITLE}}</div><div class="sd">{{MATRIX_2_DESC}}</div></article><article class="stp"><div class="sn">03</div><div class="st">{{MATRIX_3_TITLE}}</div><div class="sd">{{MATRIX_3_DESC}}</div></article><article class="stp"><div class="sn">04</div><div class="st">{{MATRIX_4_TITLE}}</div><div class="sd">{{MATRIX_4_DESC}}</div></article></div>
+    <div class="chartcard" style="margin-top:16px"><h3>{{ROADMAP_CHART_TITLE}}</h3><div class="cap">{{ROADMAP_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="roadmap"><canvas class="interactive-chart" id="chartRoadmap" aria-label="План запуска"></canvas><div class="chart-fallback">{{ROADMAP_CHART_SVG}}</div></div><script type="application/json" id="chartRoadmapData">{{ROADMAP_CHART_DATA}}</script></div>{{PAGE_6_EDIT}}
+  </section>
+
+  <section class="section" id="proof" data-page="7">
+    <div class="eyebrow">Шаг 6 · так это уже работает</div><h2>Лица создают доверие. Сеть лиц превращает его в управляемый канал.</h2><p class="lead">{{BENCHMARK_LEAD}}</p>
+    <div class="proof" style="margin-top:24px">
+      <article class="chartcard"><h3>{{TRUST_CHART_TITLE}}</h3><div class="cap">{{TRUST_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="trust"><canvas class="interactive-chart" id="chartTrust" aria-label="Факторы доверия"></canvas><div class="chart-fallback">{{TRUST_CHART_SVG}}</div></div><script type="application/json" id="chartTrustData">{{TRUST_CHART_DATA}}</script></article>
+      <article class="chartcard"><h3>{{REACH_CHART_TITLE}}</h3><div class="cap">{{REACH_CHART_SOURCE}}</div><div class="cv chartviz" data-chart="reach"><canvas class="interactive-chart" id="chartReach" aria-label="Потенциал охвата"></canvas><div class="chart-fallback">{{REACH_CHART_SVG}}</div></div><script type="application/json" id="chartReachData">{{REACH_CHART_DATA}}</script></article>
+    </div>
+    <div class="competitor-grid">{{COMPETITOR_CARDS}}</div>{{PAGE_7_EDIT}}
+  </section>
+
+  <section class="section" id="offer" data-page="8">
+    <div class="offer"><div class="eyebrow">Предложение · следующий шаг</div><h2>{{OFFER_HEADING}}</h2><p class="lead">{{OFFER_LEAD}}</p><div class="bigm">{{OFFER_METRICS}}</div>{{OFFER_CTA}}
+      <div class="cis-panel"><h3>AI-блогеры для аудитории СНГ</h3><p>Пилот строится как региональная сетка, а не как один универсальный персонаж: единый образ бренда сохраняется, но язык, площадка, оффер и культурный контекст адаптируются под рынок.</p><div class="cis-grid"><div class="cis-card"><b>Россия и Беларусь</b><span>Русскоязычные сценарии для Telegram, VK и short-video; акцент на доверии, понятном сравнении и локальных способах покупки.</span></div><div class="cis-card"><b>Казахстан и Центральная Азия</b><span>Локализация примеров, цен и призывов к действию; при необходимости — отдельные версии на русском и национальных языках.</span></div><div class="cis-card"><b>Контроль кампании</b><span>UTM, промокоды, маркировка рекламы и единая модерация формулировок по требованиям конкретной страны и площадки.</span></div></div></div>
+      <div class="contacts"><h3>Контакты для обсуждения пилота</h3><div class="contact-row"><a class="contact-pill" href="{{CONTACT_1_HREF}}">{{CONTACT_1_TEXT}}</a><a class="contact-pill" href="{{CONTACT_2_HREF}}">{{CONTACT_2_TEXT}}</a></div><div class="contact-placeholder">Место для имени ответственного, Telegram, телефона и финального CTA перед отправкой клиенту.</div></div>
+    </div>{{PAGE_8_EDIT}}
+  </section>
+  <footer class="footer"><span>{{COMPANY}} · персональный разбор</span><span>{{WEBSITE}} · {{GENERATED_AT}}</span></footer>
+</main>
+<!-- BOT_PRESENT_CHART_JS -->
+<script>
+  window.__BOT_CHARTS_READY__=(async()=>{
+    if(!window.Chart)return;
+    document.documentElement.dataset.chartMode='interactive';
+    const css=getComputedStyle(document.documentElement);
+    const color=name=>css.getPropertyValue(name).trim();
+    const ink=color('--ink'),muted=color('--muted'),line=color('--line'),paper=color('--paper');
+    const font=getComputedStyle(document.body).fontFamily;
+    const mobile=matchMedia('(max-width:640px)').matches;
+    Chart.defaults.font.family=font;Chart.defaults.font.size=mobile?13:15;Chart.defaults.color=ink;
+
+    const formatValue=(value,unit='')=>{
+      const numeric=Number(value);const shown=Number.isInteger(numeric)?String(numeric):numeric.toLocaleString('ru-RU',{maximumFractionDigits:1});
+      if(unit==='%')return shown+'%';
+      return unit?shown+' '+unit:shown;
+    };
+    const load=id=>JSON.parse(document.getElementById(id).textContent);
+    const tooltip={backgroundColor:color('--panel'),titleColor:'#fff',bodyColor:'#fff',padding:13,cornerRadius:11,displayColors:true,titleFont:{size:14,weight:'700'},bodyFont:{size:14,weight:'700'},callbacks:{label(context){const unit=context.dataset.unit||'';const value=context.chart.options.indexAxis==='y'?context.parsed.x:context.parsed.y??context.parsed;return ' '+context.label+': '+formatValue(value,unit,context.dataset.estimated?.[context.dataIndex]);}}};
+    const make=(canvasId,dataId,type,indexAxis='x')=>{
+      const canvas=document.getElementById(canvasId);if(!canvas)return;const data=load(dataId);const dataset=data.datasets[0];
+      dataset.borderWidth=0;dataset.borderRadius=type==='bar'?10:0;dataset.borderSkipped=false;dataset.maxBarThickness=38;dataset.hoverBorderWidth=2;dataset.hoverBorderColor=paper;if(type==='doughnut'){dataset.hoverOffset=8;dataset.spacing=3;}
+      const horizontal=indexAxis==='y';
+      const options={responsive:true,maintainAspectRatio:false,devicePixelRatio:Math.min(2,window.devicePixelRatio||1),indexAxis,animation:{duration:900,easing:'easeOutQuart'},layout:{padding:horizontal?{top:10,right:10,bottom:10,left:4}:{top:10,right:10,bottom:6,left:4}},interaction:{mode:'nearest',intersect:false},plugins:{legend:{display:type==='doughnut',position:'bottom',labels:{color:ink,usePointStyle:true,pointStyle:'circle',boxWidth:10,boxHeight:10,padding:18,font:{size:mobile?12:14,weight:'700'}}},tooltip}};
+      if(type==='bar')options.scales=horizontal?{x:{beginAtZero:true,border:{display:false},grid:{color:line,drawTicks:false},ticks:{color:muted,padding:9,font:{size:mobile?11:13,weight:'700'}}},y:{border:{display:false},grid:{display:false},ticks:{color:ink,autoSkip:false,padding:9,font:{size:mobile?12:14,weight:'700'}}}}:{x:{border:{display:false},grid:{display:false},ticks:{color:ink,maxRotation:0,minRotation:0,padding:9,font:{size:mobile?11:13,weight:'700'}}},y:{beginAtZero:true,border:{display:false},grid:{color:line,drawTicks:false},ticks:{color:muted,padding:9,font:{size:mobile?11:13,weight:'700'}}}};
+      if(type==='doughnut'){options.cutout='66%';options.layout={padding:{top:4,right:8,bottom:4,left:8}};}
+      new Chart(canvas,{type,data,options});canvas.closest('.chartviz').classList.add('chart-ready');
+    };
+    make('chartMarket','chartMarketData','bar','y');
+    make('chartAudience','chartAudienceData','doughnut');
+    make('chartEconomy','chartEconomyData','bar');
+    make('chartVolume','chartVolumeData','bar');
+    make('chartRoadmap','chartRoadmapData','bar','y');
+    make('chartTrust','chartTrustData','bar','y');
+    make('chartReach','chartReachData','bar');
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  })();
+</script>
+<script>
+  (async()=>{const pause=ms=>new Promise(r=>setTimeout(r,ms));if(document.fonts&&document.fonts.ready)await Promise.race([document.fonts.ready,pause(2500)]);await Promise.race([window.__BOT_CHARTS_READY__||Promise.resolve(),pause(4500)]);const images=[...document.images];await Promise.race([Promise.allSettled(images.map(img=>img.complete?Promise.resolve():img.decode())),pause(3500)]);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));document.documentElement.dataset.pdfLayout='single-page-screen';window.__BOT_PRESENT_READY__=true})();
+</script>
+</body>
+</html>

@@ -23,6 +23,16 @@ export function createPresentationKeyboard(): Keyboard {
     .persistent();
 }
 
+export function createAiBloggersKeyboard(): Keyboard {
+  return new Keyboard()
+    .text(BUTTONS.aiBloggersYes)
+    .row()
+    .text(BUTTONS.aiBloggersNo)
+    .row()
+    .text(BUTTONS.back)
+    .resized();
+}
+
 export function createLeadResultKeyboard(): Keyboard {
   return new Keyboard()
     .text(BUTTONS.presentationsFromLeads)

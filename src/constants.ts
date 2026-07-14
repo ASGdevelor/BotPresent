@@ -4,6 +4,8 @@ export const BUTTONS = {
   editPresentation: "✏️ Изменить презентацию",
   myPresentations: "📁 Мои презентации",
   presentationsFromLeads: "🗂 Презентации для всех лидов",
+  aiBloggersYes: "✅ Да, продаём AI-блогеров",
+  aiBloggersNo: "Нет, обычная бизнес-презентация",
   back: "◀️ Назад",
   leadGeneration: "🎯 Лидогенерация",
 } as const;

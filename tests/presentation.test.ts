@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   buildFallbackResearchQueries,
+  buildBusinessAnalysis,
   buildPresentationCharts,
   buildResearchQueries,
   extractWebsiteIdentity,
@@ -10,6 +11,7 @@ import {
   isResearchPageRelevant,
   isRelatedCompanyPage,
   parseBingWebsiteSnapshot,
+  parseCompetitorProfiles,
   parseResearchResults,
   parseResearchResultUrls,
   parseVerifiedNumericFacts,
@@ -46,7 +48,7 @@ const facts: WebsiteFacts = {
 describe("presentation template", () => {
   test("builds several focused research queries", () => {
     const queries = buildResearchQueries("фармацевтический рынок", "Apteka.ru");
-    expect(queries).toHaveLength(5);
+    expect(queries).toHaveLength(6);
     expect(queries.join(" ")).toContain("2025 2026");
     expect(queries.join(" ")).toContain("Apteka.ru");
     expect(queries.join(" ")).toContain("site:dsm.ru");
@@ -55,7 +57,7 @@ describe("presentation template", () => {
 
   test("builds a broader fallback search with the current year", () => {
     const queries = buildFallbackResearchQueries("рынок корпоративного обучения", "Example");
-    expect(queries).toHaveLength(5);
+    expect(queries).toHaveLength(6);
     expect(queries.join(" ")).toContain(String(new Date().getUTCFullYear()));
     expect(queries.join(" ")).toContain("filetype:pdf");
     expect(queries.join(" ")).toContain("Росстат ЕМИСС");
@@ -180,16 +182,35 @@ describe("presentation template", () => {
     expect(groups.map((group) => group.map((item) => item.value))).toEqual([[379, 290], [30, 27.7]]);
   });
 
-  test("builds separate sourced charts for research and official-site figures", () => {
+  test("builds market, audience and brand charts without exposing source URLs", () => {
     const charts = buildPresentationCharts({
       ...facts,
       statistics: [{ label: "Компания обслуживает 120 клиентов", value: "120", displayValue: "120 клиентов", unit: "клиентов", sourceUrl: facts.website }],
     }, "#123456", "#abcdef");
     expect(charts).toHaveLength(7);
-    expect(charts[0]!.title).toContain("интернет-исследования");
-    expect(charts[0]!.sourceText).toContain("wikipedia.org");
-    expect(charts[1]!.title).toContain("официального сайта");
-    expect(charts[1]!.sourceText).toContain(facts.website);
+    expect(charts[0]!.title).toContain("Динамика и масштаб рынка");
+    expect(charts[0]!.sourceText).not.toContain("wikipedia.org");
+    expect(charts[1]!.title).toContain("Структура целевой аудитории");
+    expect(charts[1]!.kind).toBe("doughnut");
+    expect(charts[0]!.svg).toContain("<svg");
+    expect(charts[1]!.svg).toContain("<circle");
+  });
+
+  test("extracts real competitor candidates from Bing results", () => {
+    const profiles = parseCompetitorProfiles(`
+      <li class="b_algo"><h2><a href="https://alpha.example/">Alpha — сервис для бизнеса</a></h2><div class="b_caption"><p>Помогает компаниям автоматизировать процессы.</p></div></li>
+      <li class="b_algo"><h2><a href="https://example.com/about">Example &amp; Co</a></h2><div class="b_caption"><p>Собственный сайт.</p></div></li>
+    `, "https://www.bing.com/search", "Example & Co", "https://example.com/");
+    expect(profiles).toHaveLength(1);
+    expect(profiles[0]).toMatchObject({ name: "Alpha", website: "https://alpha.example/" });
+  });
+
+  test("builds strengths, weaknesses and audience scores instead of source counts", () => {
+    const analysis = buildBusinessAnalysis(facts);
+    expect(analysis.strengths).toHaveLength(3);
+    expect(analysis.weaknesses).toHaveLength(3);
+    expect(analysis.audience.reduce((sum, item) => sum + item.value, 0)).toBe(100);
+    expect(Object.values(analysis.scores).every((value) => value >= 18 && value <= 96)).toBeTrue();
   });
 
   test("builds a website snapshot from exact-domain Bing results after DNS failure", () => {
@@ -275,36 +296,41 @@ describe("presentation template", () => {
     const html = renderPresentationTemplate(template, facts, { leadRelevance: "Точное совпадение" }, new Date("2026-07-11T00:00:00Z"));
     expect(html).not.toMatch(/\{\{[A-Z0-9_]+\}\}/);
     expect(html).toContain("Example &amp; Co");
-    expect(html).toContain("Публичное &lt;описание&gt;");
+    expect(html).toContain("Я разобрал example.com");
+    expect(html).toContain("Решение — не абстрактный «AI»");
     expect(html).toContain("12.5");
     expect(html).toContain("https://ru.wikipedia.org/wiki/Example");
-    expect(html).toContain("Перейти на сайт компании");
+    expect(html).toContain("Запустить 90-дневный пилот AI-блогеров");
   });
 
-  test("fills the repository template while preserving all video elements exactly", async () => {
+  test("keeps AI-blogger content static in sales mode and supports a business-only mode", async () => {
     const template = await readFile(path.resolve(import.meta.dir, "..", "Generic", "index.html"), "utf8");
-    const videosBefore = template.match(/<video\b[^>]*><\/video>/g) ?? [];
-    const videoSourcesBefore = template.match(/https:\/\/fito\.roky\.video\/[^\"']+/g) ?? [];
     const sectionsBefore = template.match(/<section\b/g) ?? [];
     const html = renderPresentationTemplate(template, facts);
-    const videosAfter = html.match(/<video\b[^>]*><\/video>/g) ?? [];
-    const videoSourcesAfter = html.match(/https:\/\/fito\.roky\.video\/[^\"']+/g) ?? [];
+    const businessHtml = renderPresentationTemplate(template, facts, undefined, new Date(), { sellAiBloggers: false });
 
     expect(html).not.toMatch(/\{\{[A-Z0-9_]+\}\}/);
-    expect(videosBefore).toHaveLength(3);
-    expect(videosAfter).toEqual(videosBefore);
-    expect(videoSourcesAfter).toEqual(videoSourcesBefore);
+    expect(html.match(/class="ai-blogger-gif"/g) ?? []).toHaveLength(3);
+    expect(html.match(/data:image\/gif;base64,/g) ?? []).toHaveLength(3);
+    expect(html).toContain("управляемый цифровой эксперт");
+    expect(html).not.toContain("fito.roky.video");
+    expect(businessHtml.match(/<video\b/g) ?? []).toHaveLength(0);
+    expect(businessHtml.match(/<img\b/g)?.length ?? 0).toBeGreaterThanOrEqual(5);
+    expect(businessHtml).not.toContain("data:image/gif;base64,");
+    expect(businessHtml).not.toContain("fito.roky.video");
     expect(html.match(/<section\b/g)).toHaveLength(sectionsBefore.length);
     expect(html).toContain("--green:#123456");
     expect(html).toContain('window.__BOT_PRESENT_READY__=true');
     expect(html).toContain("Содержание");
-    expect(html).toContain("Введение");
-    expect(html).toContain("1.1. Общие сведения о предприятии");
-    expect(html).toContain("2. Характеристика и описание информационных инструментов");
-    expect(html).toContain("3. Характеристика и описание разделов и подразделов");
-    expect(html).toContain("4. Индивидуальное задание");
-    expect(html).toContain("Заключение");
-    expect(html).not.toContain("Список использованных источников информации");
+    expect(html).toContain("Персональная стратегия роста");
+    expect(html).toContain("Где Example &amp; Co уже силён");
+    expect(html).toContain("Рынок «Консалтинг»");
+    expect(html).toContain("Контент-матрица AI-блогеров для Example &amp; Co");
+    expect(html).toContain("Конкурентное поле Example &amp; Co");
+    expect(html).toContain("Запустить AI-блогеров для Example &amp; Co");
+    expect(businessHtml).toContain("Выводы по Example &amp; Co");
+    expect(html).not.toContain("публичных источников изучено");
+    expect(html.match(/<svg class="business-chart"/g) ?? []).toHaveLength(7);
   });
 
   test("uses the user-selected palette in CSS and chart datasets", async () => {
@@ -314,8 +340,13 @@ describe("presentation template", () => {
     });
 
     expect(html).toContain("--green:#6d4cc3");
-    expect(html).toContain('"backgroundColor":["#6d4cc3"]');
-    expect(html).not.toContain('"backgroundColor":["#123456"]');
+    expect(html).toContain('fill="#6d4cc3"');
+    expect(html).not.toContain('fill="#123456"');
+    const chartJson = html.match(/<script type="application\/json" id="chartAudienceData">([^<]+)<\/script>/)?.[1];
+    expect(chartJson).toBeTruthy();
+    const colors = (JSON.parse(chartJson!) as { datasets: Array<{ backgroundColor: string[] }> }).datasets[0]!.backgroundColor;
+    expect(new Set(colors).size).toBeGreaterThan(1);
+    expect(colors.every((color) => color.startsWith("#"))).toBeTrue();
   });
 
   test("reports unknown markers by name", () => {

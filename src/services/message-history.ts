@@ -31,7 +31,7 @@ export interface PresentationHistoryResult {
   companyName: string;
   website: string;
   sources: string[];
-  researchStatus: "verified" | "not-found";
+  researchStatus: "verified" | "estimated" | "not-found";
 }
 
 export class MessageHistory {
@@ -105,7 +105,9 @@ export class MessageHistory {
     const sources = [...new Set(result.sources)].slice(0, 8);
     const research = result.researchStatus === "verified"
       ? "проверяемые отраслевые данные найдены"
-      : "отраслевые числа не найдены, использован явный пустой fallback";
+      : result.researchStatus === "estimated"
+        ? "найдены приблизительные отраслевые оценки с указанием источников"
+        : "отраслевые числа не найдены, использована аналитика открытых страниц сайта";
     this.record(chatId, userId, "system", [
       `Презентация ${result.id} создана для ${result.companyName}.`,
       `Сайт: ${result.website}.`,

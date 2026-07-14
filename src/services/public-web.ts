@@ -7,6 +7,7 @@ const REQUEST_TIMEOUT_MS = 12_000;
 const MAX_REDIRECTS = 3;
 const MAX_RESOURCE_SIZE = 2_000_000;
 const MAX_HTML_SIZE = 6_000_000;
+const MAX_IMAGE_SIZE = 10_000_000;
 
 export class PublicWebError extends Error {
   readonly code?: "DNS_LOOKUP" | "FETCH_FAILED" | "HTTP_ERROR" | "INVALID_RESPONSE";
@@ -172,7 +173,7 @@ async function fetchPublicResource(
   accept: string,
   allowedTypes: string[],
   maxSize = MAX_RESOURCE_SIZE,
-): Promise<{ text: string; finalUrl: string }> {
+): Promise<{ body: Uint8Array; contentType: string; finalUrl: string }> {
   let url = parsePublicHttpUrl(input);
 
   for (let redirect = 0; redirect <= MAX_REDIRECTS; redirect += 1) {
@@ -215,12 +216,12 @@ async function fetchPublicResource(
       throw new PublicWebError(`Ответ сайта ${url.hostname} превышает допустимый размер.`);
     }
 
-    const text = await response.text();
-    if (text.length > maxSize) {
+    const body = new Uint8Array(await response.arrayBuffer());
+    if (body.byteLength > maxSize) {
       throw new PublicWebError(`Ответ сайта ${url.hostname} превышает допустимый размер.`);
     }
 
-    return { text, finalUrl: url.toString() };
+    return { body, contentType, finalUrl: url.toString() };
   }
 
   throw new PublicWebError("Не удалось завершить загрузку сайта.");
@@ -233,13 +234,13 @@ export async function fetchPublicHtml(input: string): Promise<{ html: string; fi
     ["text/html", "application/xhtml+xml"],
     MAX_HTML_SIZE,
   );
-  return { html: result.text, finalUrl: result.finalUrl };
+  return { html: new TextDecoder().decode(result.body), finalUrl: result.finalUrl };
 }
 
 /** Загружает публичный CSS с теми же SSRF-, redirect- и size-проверками, что и HTML. */
 export async function fetchPublicCss(input: string): Promise<{ css: string; finalUrl: string }> {
   const result = await fetchPublicResource(input, "text/css,*/*;q=0.1", ["text/css"]);
-  return { css: result.text, finalUrl: result.finalUrl };
+  return { css: new TextDecoder().decode(result.body), finalUrl: result.finalUrl };
 }
 
 /** Загружает публичный RSS/XML, например серверную выдачу Bing. */
@@ -249,5 +250,24 @@ export async function fetchPublicXml(input: string): Promise<{ xml: string; fina
     "application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.1",
     ["application/rss+xml", "application/xml", "text/xml"],
   );
-  return { xml: result.text, finalUrl: result.finalUrl };
+  return { xml: new TextDecoder().decode(result.body), finalUrl: result.finalUrl };
+}
+
+/** Загружает публичное изображение с теми же DNS-, redirect- и size-проверками, что и HTML. */
+export async function fetchPublicImage(input: string): Promise<{
+  body: Uint8Array;
+  contentType: string;
+  finalUrl: string;
+}> {
+  const result = await fetchPublicResource(
+    input,
+    "image/avif,image/webp,image/svg+xml,image/png,image/jpeg,image/gif,*/*;q=0.1",
+    ["image/avif", "image/webp", "image/svg+xml", "image/png", "image/jpeg", "image/gif", "image/x-icon"],
+    MAX_IMAGE_SIZE,
+  );
+  return {
+    body: result.body,
+    contentType: result.contentType.split(";", 1)[0] || "application/octet-stream",
+    finalUrl: result.finalUrl,
+  };
 }

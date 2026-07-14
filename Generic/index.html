@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{COMPANY}} — информационная презентация</title>
+  <title>{{COMPANY}} — персональная бизнес-презентация</title>
   <meta name="description" content="{{DESCRIPTION}}">
-  <meta property="og:title" content="{{COMPANY}} — информационная презентация">
+  <meta property="og:title" content="{{COMPANY}} — персональная бизнес-презентация">
   <meta property="og:description" content="{{DESCRIPTION}}">
   <meta property="og:image" content="{{LOGO_URL}}">
   <style>
@@ -26,10 +26,11 @@
   --warn:#f2b84b;
   --red:#ce4646;
   --blue:#2c78be;
+  --font:"{{FONT_FAMILY}}",Arial,sans-serif;
 }
 body{background:linear-gradient(180deg,var(--background) 0,var(--background-end) 520px);color:var(--ink);font:16px/1.6 "{{FONT_FAMILY}}",Arial,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit}
-.wrap{max-width:1160px;margin:0 auto;padding:26px 24px 96px}
+.wrap{max-width:1180px;margin:0 auto;padding:34px 32px 112px}
 .brandbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px;flex-wrap:wrap}
 .brandbar .lhs{display:flex;align-items:center;gap:14px}
 .logo-box{width:154px;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:8px 12px;box-shadow:0 12px 26px rgba(0,0,0,.08)}
@@ -68,18 +69,23 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 .kpi .n{font-size:38px;font-weight:900;letter-spacing:-1px}
 .kpi .l{color:var(--muted);font-size:14px;max-width:180px}
 .good{color:var(--green-2)}.bad{color:var(--red)}.blue{color:var(--blue)}
-.sec{margin-top:86px}
+.sec{margin-top:100px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
 .card{border:1px solid var(--line);border-radius:18px;padding:20px;background:var(--paper);box-shadow:0 8px 22px rgba(0,0,0,.08)}
 .card:hover{border-color:#a9d6b3;box-shadow:0 14px 34px rgba(17,102,34,.09);transform:translateY(-1px)}
 .ctitle{font-size:17px;font-weight:900;line-height:1.3;margin-bottom:8px;color:var(--green)}
 .cwhat{color:var(--ink);font-size:14.5px}
-.dash2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.chartcard{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:20px;padding:22px;background:linear-gradient(145deg,var(--paper),var(--soft));box-shadow:0 12px 30px rgba(0,0,0,.09)}
+.dash2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.chartcard{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:23px;padding:26px;background:linear-gradient(145deg,var(--paper),var(--soft));box-shadow:0 15px 36px rgba(0,0,0,.09)}
 .chartcard:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--green),var(--acid))}
-.chartcard h3{font-size:16px;line-height:1.3;margin:0 0 7px;color:var(--ink)}
-.chartcard .cap{min-height:34px;font-size:11.5px;line-height:1.45;color:var(--muted);margin-bottom:12px;overflow-wrap:anywhere}
-.cv{position:relative;height:300px}.cv.tall{height:360px}
+.chartcard h3{font-size:19px;line-height:1.3;margin:0 0 8px;color:var(--ink)}
+.chartcard .cap{min-height:40px;font-size:13px;line-height:1.48;color:var(--muted);margin-bottom:14px;overflow-wrap:anywhere}
+.cv{position:relative;height:340px}.cv.tall{height:380px}.chartviz{position:relative;min-width:0}.interactive-chart{display:none;width:100%!important;height:100%!important}.chart-fallback{height:100%}.chartviz.chart-ready .interactive-chart{display:block}.chartviz.chart-ready .chart-fallback{display:none}
+.business-chart{display:block;width:100%;height:100%;overflow:visible;color:var(--ink)}
+.business-chart .svg-label{fill:var(--ink);font:700 14px var(--font)}
+.business-chart .svg-track{fill:var(--line);opacity:.62}
+.business-chart .svg-hole{fill:var(--paper)}
+.business-chart .svg-caption{fill:var(--muted);font:700 12px var(--font)}
 .note,.assume,.warn{border-radius:16px;padding:17px 18px;font-size:13.5px;margin:18px 0}
 .note{background:#eef9e9;border:1px solid #cae8bf;color:#315d20}
 .assume{background:var(--soft);border:1px solid var(--line);color:var(--muted)}
@@ -98,7 +104,8 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 .phone-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:24px}
 .phone{background:#07150c;border:1px solid rgba(255,255,255,.18);border-radius:32px;padding:12px;box-shadow:0 22px 44px rgba(0,0,0,.24)}
 .phone-screen{position:relative;overflow:hidden;border-radius:24px;background:#000;aspect-ratio:9/16}
-.phone-screen video{width:100%;height:100%;object-fit:cover;display:block}
+.phone-screen img,.phone-screen video{width:100%;height:100%;object-fit:cover;display:block}
+.ai-blogger-gif{background:var(--green);image-rendering:auto}
 .phone-top{position:absolute;left:12px;right:12px;top:12px;z-index:2;display:flex;align-items:center;justify-content:space-between;color:#fff;font-size:11px;font-weight:900;text-shadow:0 2px 10px rgba(0,0,0,.45)}
 .phone-tag{background:rgba(12,33,20,.72);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:6px 9px}
 .phone-caption{padding:14px 4px 4px;color:#dff5e6}
@@ -113,6 +120,9 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 .caselogo{font-size:18px;font-weight:900;color:var(--green);letter-spacing:-.3px}
 .casetag{font-size:11.5px;font-weight:900;color:var(--green);background:var(--green-3);border-radius:999px;padding:4px 12px;text-transform:uppercase;letter-spacing:.4px}
 .casegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+.competitor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0}
+.competitor{border:1px solid var(--line);background:linear-gradient(155deg,var(--paper),var(--soft));border-radius:18px;padding:17px;min-height:138px}
+.competitor-no{font-size:11px;font-weight:900;color:var(--green);letter-spacing:1px}.competitor h3{font-size:16px;margin:6px 0}.competitor p{font-size:12.5px;line-height:1.4;color:var(--muted);margin:0 0 8px}.competitor-move{font-size:11.5px;font-weight:800;color:var(--green)}
 .casem .cn{font-size:30px;font-weight:900;letter-spacing:-1px;color:var(--green);line-height:1.1}
 .casem .cl{font-size:12.5px;color:var(--muted);margin-top:4px}
 .climax{background:linear-gradient(160deg,var(--soft),var(--paper));color:var(--ink);border:1px solid var(--line);border-radius:26px;padding:44px 38px;margin-top:24px;box-shadow:0 26px 70px rgba(0,0,0,.12)}
@@ -127,9 +137,9 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 .page-edit{margin-top:22px;padding:16px 18px;border:2px dashed var(--green);border-radius:14px;background:var(--soft);color:var(--ink)}
 .page-edit b{display:block;color:var(--green);margin-bottom:5px}.page-edit p{white-space:pre-wrap}
 .hero>.page-edit{grid-column:1/-1}
-@media print{@page{size:16in 9in;margin:.3in}html,body{width:15.4in;height:8.4in}body{background:var(--background)!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}.wrap{width:15.4in;max-width:none;padding:0}.catalog-nav,.brandbar{display:none}section{box-sizing:border-box;break-after:page;page-break-after:always;width:15.4in;height:8.4in;min-height:0;margin:0!important;padding:.22in .3in;overflow:hidden}section:last-of-type{break-after:auto;page-break-after:auto}.phone-grid{grid-template-columns:repeat(3,280px);justify-content:center}.phone-screen video{max-height:490px}.cv{height:250px}.cv.tall{height:290px}.climax{margin-top:0;padding:28px 32px}.casecard{padding:20px 24px}.kpis{margin-top:24px}}
+@media print{html,body{min-height:0}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
 @media(max-width:900px){.hero{grid-template-columns:1fr}.hero-card{max-width:540px}.dash2{grid-template-columns:1fr}.phone-grid{grid-template-columns:1fr;max-width:420px}.steps3{grid-template-columns:1fr 1fr}}
-@media(max-width:680px){.wrap{padding:22px 16px 70px}h1{font-size:34px}h2{font-size:26px}.hero p,.lead{font-size:16.5px}.vs{grid-template-columns:1fr}.casegrid{grid-template-columns:1fr 1fr}.bigm{grid-template-columns:1fr}.brandbar .lhs{align-items:flex-start}.logo-box{width:142px}.product-grid{grid-template-columns:1fr}.delivery-row{grid-template-columns:1fr}.climax{padding:30px 20px}.kpis{gap:22px}.kpi .n{font-size:32px}}
+@media(max-width:680px){.wrap{width:100%;max-width:100%;padding:22px 16px 74px}.hero,.hero>*{width:100%;min-width:0;max-width:100%}h1{max-width:100%;font-size:34px;overflow-wrap:anywhere}h2{font-size:26px}.hero p,.lead{max-width:100%;font-size:16.5px;overflow-wrap:anywhere}.vs{grid-template-columns:1fr}.casegrid{grid-template-columns:1fr 1fr}.bigm{grid-template-columns:1fr}.brandbar .lhs{align-items:flex-start}.logo-box{width:142px}.product-grid{grid-template-columns:1fr}.delivery-row{grid-template-columns:1fr}.climax{padding:30px 20px}.kpis{width:100%;min-width:0;gap:22px}.kpi .n{font-size:32px}.chartcard{padding:21px}.cv{height:300px}}
 @media(max-width:460px){.steps3{grid-template-columns:1fr}.casegrid{grid-template-columns:1fr}.cpill{width:100%;justify-content:center}.catalog-nav a,.catalog-nav span{font-size:12px;padding:6px 10px}}
   </style>
 </head>
@@ -138,7 +148,7 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
   <div class="brandbar">
     <div class="lhs">
       <div class="logo-box"><img src="{{LOGO_URL}}" alt="{{COMPANY}}"></div>
-      <div><div class="nm">{{COMPANY}} · информационный проект</div><div class="sub">персональный разбор сайта, сферы и открытых данных</div></div>
+      <div><div class="nm">{{COMPANY}} уже есть продуктовая база. Нужно дать ей</div><div class="sub">лица</div></div>
     </div>
     <div class="rhs">{{WEBSITE}} · {{INDUSTRY}} · {{GENERATED_AT}}</div>
   </div>
@@ -155,7 +165,7 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
   <section class="hero" data-page="1">
     <div>
       <div class="step-no">{{INTRO_TITLE}} · {{WEBSITE}}</div>
-      <h1>{{COMPANY}}: <em>персональный разбор публичного сайта и контент-возможностей</em>.</h1>
+      <h1>{{HEADLINE}}</h1>
       <p>{{DESCRIPTION}}</p>
       <div class="kpis">
         {{KPI_1}}
@@ -170,7 +180,7 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
         <div class="shop-logo"><img src="{{LOGO_URL}}" alt="{{COMPANY}}"></div>
         <div class="shop-chip">{{INDUSTRY}}</div>
       </div>
-      <div class="searchbar">Направления, найденные на публичном сайте</div>
+      <div class="searchbar">Направления</div>
       <div class="product-grid">
         <div class="product p1"><div class="pic"></div><b>{{PRODUCT_1_TITLE}}</b><small>{{PRODUCT_1_DESC}}</small></div>
         <div class="product p2"><div class="pic"></div><b>{{PRODUCT_2_TITLE}}</b><small>{{PRODUCT_2_DESC}}</small></div>
@@ -186,7 +196,7 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
   </section>
 
   <section class="sec" data-page="2">
-    <div class="step-no">Шаг 1 · что уже сильное</div>
+    <div class="step-no">Диагностика бренда · сильные и слабые стороны</div>
     <h2>{{ABOUT_HEADING}}</h2>
     <p class="lead">{{ABOUT_LEAD}}</p>
     <div class="cards">
@@ -201,19 +211,19 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
   </section>
 
   <section class="sec" id="market" data-page="3">
-    <div class="step-no">Шаг 2 · рынок</div>
+    <div class="step-no">Шаг 2 · рынок и покупатель</div>
     <h2>{{MARKET_HEADING}}</h2>
     <p class="lead">{{MARKET_LEAD}}</p>
     <div class="dash2">
       <div class="chartcard">
         <h3>{{MARKET_CHART_TITLE}}</h3>
         <div class="cap">{{MARKET_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cMarket"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartMarket" aria-label="Рыночные показатели"></canvas><div class="chart-fallback">{{MARKET_CHART_SVG}}</div></div><script type="application/json" id="chartMarketData">{{MARKET_CHART_DATA}}</script>
       </div>
       <div class="chartcard">
         <h3>{{CHANNEL_CHART_TITLE}}</h3>
         <div class="cap">{{CHANNEL_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cChannel"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartAudience" aria-label="Структура аудитории"></canvas><div class="chart-fallback">{{CHANNEL_CHART_SVG}}</div></div><script type="application/json" id="chartAudienceData">{{CHANNEL_CHART_DATA}}</script>
       </div>
     </div>
     <div class="note"><b>{{MARKET_NOTE_TITLE}}</b> {{MARKET_NOTE_TEXT}}</div>
@@ -221,16 +231,16 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
   </section>
 
   <section class="sec" data-page="4">
-    <div class="step-no">Шаг 3 · обычные блогеры</div>
+    <div class="step-no">{{FORMAT_STEP}}</div>
     <h2>{{TOOLS_HEADING}}</h2>
     <p class="lead">{{BLOGGER_LEAD}}</p>
     <div class="vs">
       <div class="vscol old">
-        <h4>Ручное производство материалов</h4>
+        <h4>{{FORMAT_OLD_TITLE}}</h4>
         {{LIVE_BLOGGER_CONS}}
       </div>
       <div class="vscol new">
-        <h4>Системный цифровой формат</h4>
+        <h4>{{FORMAT_NEW_TITLE}}</h4>
         {{AI_BLOGGER_PROS}}
       </div>
     </div>
@@ -238,12 +248,12 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
       <div class="chartcard">
         <h3>{{ECONOMY_CHART_TITLE}}</h3>
         <div class="cap">{{ECONOMY_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cEconomy"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartEconomy" aria-label="Экономика решения"></canvas><div class="chart-fallback">{{ECONOMY_CHART_SVG}}</div></div><script type="application/json" id="chartEconomyData">{{ECONOMY_CHART_DATA}}</script>
       </div>
       <div class="chartcard">
         <h3>{{VOLUME_CHART_TITLE}}</h3>
         <div class="cap">{{VOLUME_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cVolume"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartVolume" aria-label="Масштаб решения"></canvas><div class="chart-fallback">{{VOLUME_CHART_SVG}}</div></div><script type="application/json" id="chartVolumeData">{{VOLUME_CHART_DATA}}</script>
       </div>
     </div>
     {{PAGE_4_EDIT}}
@@ -251,39 +261,39 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 
   <section class="sec" id="video" data-page="5">
     <div class="avatar-stage">
-      <div class="step-no">Видео · первые AI-блогеры</div>
+      <div class="step-no">{{VIDEO_STEP}}</div>
       <h2>{{VIDEO_HEADING}}</h2>
       <p class="lead">{{VIDEO_LEAD}}</p>
       <div class="phone-grid">
         <div class="phone">
           <div class="phone-screen">
-            <video src="https://fito.roky.video/fito-ai-video-1.mp4" poster="https://fito.roky.video/fito-ai-video-1-poster.jpg" autoplay muted loop playsinline></video>
-            <div class="phone-top"><span class="phone-tag">{{VIDEO_1_TAG}}</span><span>AI-гид</span></div>
+            {{VIDEO_1_MEDIA}}
+            <div class="phone-top"><span class="phone-tag">{{VIDEO_1_TAG}}</span><span>{{VIDEO_ROLE_1}}</span></div>
           </div>
           <div class="phone-caption"><b>{{VIDEO_1_TITLE}}</b><span>{{VIDEO_1_DESC}}</span></div>
         </div>
         <div class="phone">
           <div class="phone-screen">
-            <video src="https://fito.roky.video/fito-ai-video-2.mp4" poster="https://fito.roky.video/fito-ai-video-2-poster.jpg" autoplay muted loop playsinline></video>
-            <div class="phone-top"><span class="phone-tag">{{VIDEO_2_TAG}}</span><span>AI-ведущий</span></div>
+            {{VIDEO_2_MEDIA}}
+            <div class="phone-top"><span class="phone-tag">{{VIDEO_2_TAG}}</span><span>{{VIDEO_ROLE_2}}</span></div>
           </div>
           <div class="phone-caption"><b>{{VIDEO_2_TITLE}}</b><span>{{VIDEO_2_DESC}}</span></div>
         </div>
         <div class="phone">
           <div class="phone-screen">
-            <video src="https://fito.roky.video/fito-ai-video-3.mp4" poster="https://fito.roky.video/fito-ai-video-3-poster.jpg" autoplay muted loop playsinline></video>
-            <div class="phone-top"><span class="phone-tag">{{VIDEO_3_TAG}}</span><span>AI-консультант</span></div>
+            {{VIDEO_3_MEDIA}}
+            <div class="phone-top"><span class="phone-tag">{{VIDEO_3_TAG}}</span><span>{{VIDEO_ROLE_3}}</span></div>
           </div>
           <div class="phone-caption"><b>{{VIDEO_3_TITLE}}</b><span>{{VIDEO_3_DESC}}</span></div>
         </div>
       </div>
-      <div class="video-note"><b>Почему это работает:</b> {{VIDEO_NOTE}}</div>
+      <div class="video-note"><b>{{VIDEO_NOTE_TITLE}}</b> {{VIDEO_NOTE}}</div>
     </div>
     {{PAGE_5_EDIT}}
   </section>
 
   <section class="sec" data-page="6">
-    <div class="step-no">Шаг 4 · контент-матрица</div>
+    <div class="step-no">Контент-карта · темы и следующий шаг</div>
     <h2>{{PROJECT_SECTIONS_HEADING}}</h2>
     <p class="lead">{{MATRIX_LEAD}}</p>
     <div class="steps3">
@@ -297,32 +307,20 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
   </section>
 
   <section class="sec" data-page="7">
-    <div class="step-no">Шаг 5 · бенчмарк</div>
+    <div class="step-no">Конкуренты · позиции и свободная роль</div>
     <h2>{{BENCHMARK_NAME}}</h2>
     <p class="lead">{{BENCHMARK_LEAD}}</p>
-    <div class="casecard">
-      <div class="caseh">
-        <div class="caselogo">{{INDUSTRY}}</div>
-        <div class="casetag">{{BENCHMARK_TAG}}</div>
-      </div>
-      <div class="casegrid">
-        <div class="casem"><div class="cn">{{BENCH_1_VALUE}}</div><div class="cl">{{BENCH_1_LABEL}}</div></div>
-        <div class="casem"><div class="cn">{{BENCH_2_VALUE}}</div><div class="cl">{{BENCH_2_LABEL}}</div></div>
-        <div class="casem"><div class="cn">{{BENCH_3_VALUE}}</div><div class="cl">{{BENCH_3_LABEL}}</div></div>
-        <div class="casem"><div class="cn">{{BENCH_4_VALUE}}</div><div class="cl">{{BENCH_4_LABEL}}</div></div>
-      </div>
-      <div class="assume"><b>{{BENCHMARK_NOTE_TITLE}}</b> {{BENCHMARK_NOTE_TEXT}}</div>
-    </div>
+    <div class="competitor-grid">{{COMPETITOR_CARDS}}</div>
     <div class="dash2" style="margin-top:16px">
       <div class="chartcard">
         <h3>{{TRUST_CHART_TITLE}}</h3>
         <div class="cap">{{TRUST_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cTrust"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartTrust" aria-label="Сильные стороны"></canvas><div class="chart-fallback">{{TRUST_CHART_SVG}}</div></div><script type="application/json" id="chartTrustData">{{TRUST_CHART_DATA}}</script>
       </div>
       <div class="chartcard">
         <h3>{{REACH_CHART_TITLE}}</h3>
         <div class="cap">{{REACH_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cReach"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartReach" aria-label="Потенциал роста"></canvas><div class="chart-fallback">{{REACH_CHART_SVG}}</div></div><script type="application/json" id="chartReachData">{{REACH_CHART_DATA}}</script>
       </div>
     </div>
     {{PAGE_7_EDIT}}
@@ -330,89 +328,45 @@ h3{font-size:15px;font-weight:900;margin-bottom:4px}
 
   <section class="sec" data-page="8">
     <div class="climax">
-      <div class="step-no">Предложение</div>
+      <div class="step-no">Предложение · следующий шаг</div>
       <h2>{{OFFER_HEADING}}</h2>
       <p class="lead">{{OFFER_LEAD}}</p>
-      <div class="bigm">
-        <div><div class="n">{{BENCH_1_VALUE}}</div><div class="l">{{BENCH_1_LABEL}}</div></div>
-        <div><div class="n">{{BENCH_2_VALUE}}</div><div class="l">{{BENCH_2_LABEL}}</div></div>
-        <div><div class="n">{{BENCH_3_VALUE}}</div><div class="l">{{BENCH_3_LABEL}}</div></div>
-      </div>
+      <div class="bigm">{{OFFER_METRICS}}</div>
       <div class="chartcard" style="margin-bottom:26px">
         <h3>{{ROADMAP_CHART_TITLE}}</h3>
         <div class="cap">{{ROADMAP_CHART_SOURCE}}</div>
-        <div class="cv"><canvas id="cRoadmap"></canvas></div>
+        <div class="cv chartviz"><canvas class="interactive-chart" id="chartRoadmap" aria-label="План запуска"></canvas><div class="chart-fallback">{{ROADMAP_CHART_SVG}}</div></div><script type="application/json" id="chartRoadmapData">{{ROADMAP_CHART_DATA}}</script>
       </div>
-      <a class="cta" href="https://t.me/heilen18">Обсудить в Telegram</a>
-      <a class="cta" href="tel:+375 44 555 6636" target="_blank" rel="noopener">Номер телефона для связи: +375 44 555 6636</a>
+      {{OFFER_CTA}}
 
     </div>
     {{PAGE_8_EDIT}}
   </section>
 </div>
 
-<script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- BOT_PRESENT_CHART_JS -->
 <script>
-/* Offline/PDF fallback: keeps charts visible when the CDN is unavailable. */
-if(typeof window.Chart!=='function'){
-  window.Chart=class{
-    static defaults={font:{},color:'#17201b'};
-    constructor(canvas,config){
-      const ctx=canvas&&canvas.getContext&&canvas.getContext('2d');
-      if(!ctx)return;
-      const labels=config.data.labels||[], values=(config.data.datasets&&config.data.datasets[0]&&config.data.datasets[0].data)||[];
-      const dataset=(config.data.datasets&&config.data.datasets[0])||{}, colors=dataset.backgroundColor||GREEN, unit=dataset.unit||'';
-      const width=canvas.width=Math.max(640,canvas.clientWidth||0), height=canvas.height=Math.max(260,canvas.clientHeight||0);
-      const left=250,right=74,plotWidth=width-left-right,max=Math.max(1,...values.map(value=>Number(value)||0)),row=Math.max(42,(height-34)/Math.max(1,labels.length));
-      ctx.clearRect(0,0,width,height);ctx.font='12px '+Chart.defaults.font.family;ctx.textBaseline='middle';
-      ctx.strokeStyle=LINE;ctx.lineWidth=1;
-      for(let grid=0;grid<=4;grid+=1){const x=left+(plotWidth*grid/4);ctx.beginPath();ctx.moveTo(x,8);ctx.lineTo(x,height-8);ctx.stroke()}
-      labels.forEach((label,index)=>{
-        const y=12+index*row,value=Number(values[index])||0,barWidth=Math.max(value===0?3:16,plotWidth*value/max),color=Array.isArray(colors)?(colors[index]||colors[0]):colors;
-        const gradient=ctx.createLinearGradient(left,0,left+barWidth,0);gradient.addColorStop(0,color);gradient.addColorStop(1,ACID);
-        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(left,y+7,barWidth,24,9);ctx.fill();
-        ctx.fillStyle=Chart.defaults.color;ctx.fillText(String(label).slice(0,36),8,y+19);ctx.font='700 12px '+Chart.defaults.font.family;ctx.fillText(`${values[index]??0}${unit?' '+unit:''}`,Math.min(width-right+8,left+barWidth+8),y+19);ctx.font='12px '+Chart.defaults.font.family;
-      });
-    }
-  };
-}
-const GREEN='{{PRIMARY_COLOR}}', GREEN2='{{ACCENT}}', ACID='{{SECONDARY_COLOR}}', RED='#ce4646', BLUE='#2c78be', GREY='{{THEME_MUTED}}', LINE='{{THEME_LINE}}';
-Chart.defaults.font.family={{FONT_FAMILY_JSON}};
-Chart.defaults.font.size=12;
-Chart.defaults.color='{{THEME_INK}}';
-const chartOptions={responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:false,
- layout:{padding:{top:4,right:12,bottom:4,left:4}},
- scales:{x:{beginAtZero:true,grid:{color:LINE},border:{display:false},ticks:{color:'{{THEME_MUTED}}'}},y:{grid:{display:false},border:{display:false},ticks:{color:'{{THEME_INK}}',font:{weight:'600'}}}},
- plugins:{legend:{display:false},tooltip:{backgroundColor:'{{THEME_PANEL}}',titleColor:'{{THEME_INK}}',bodyColor:'{{THEME_INK}}',padding:12,cornerRadius:10,callbacks:{label:context=>{const unit=context.dataset.unit||'';return `${context.parsed.x}${unit?' '+unit:''}`}}}}};
-
-new Chart(document.getElementById('cMarket'),{type:'bar',
- data:{{MARKET_CHART_DATA}},
- options:{...chartOptions}});
-
-new Chart(document.getElementById('cChannel'),{type:'bar',
- data:{{CHANNEL_CHART_DATA}},
- options:{...chartOptions}});
-
-new Chart(document.getElementById('cEconomy'),{type:'bar',
- data:{{ECONOMY_CHART_DATA}},
- options:{...chartOptions}});
-
-new Chart(document.getElementById('cVolume'),{type:'bar',
- data:{{VOLUME_CHART_DATA}},
- options:{...chartOptions}});
-
-new Chart(document.getElementById('cTrust'),{type:'bar',
- data:{{TRUST_CHART_DATA}},
- options:{...chartOptions}});
-
-new Chart(document.getElementById('cReach'),{type:'bar',
- data:{{REACH_CHART_DATA}},
- options:{...chartOptions}});
-
-new Chart(document.getElementById('cRoadmap'),{type:'bar',
- data:{{ROADMAP_CHART_DATA}},
- options:{...chartOptions}});
-window.__BOT_PRESENT_READY__=true;
+window.__BOT_CHARTS_READY__=(async()=>{
+  if(!window.Chart)return;
+  const css=getComputedStyle(document.documentElement);const color=name=>css.getPropertyValue(name).trim();
+  const ink=color('--ink'),muted=color('--muted'),line=color('--line'),paper=color('--paper');const font=getComputedStyle(document.body).fontFamily;const mobile=matchMedia('(max-width:680px)').matches;
+  Chart.defaults.font.family=font;Chart.defaults.font.size=mobile?13:15;Chart.defaults.color=ink;
+  const shown=(value,unit='')=>{const number=Number(value);const formatted=Number.isInteger(number)?String(number):number.toLocaleString('ru-RU',{maximumFractionDigits:1});if(unit==='%')return formatted+'%';return unit?formatted+' '+unit:formatted};
+  const load=id=>JSON.parse(document.getElementById(id).textContent);const tooltip={backgroundColor:color('--panel'),titleColor:'#fff',bodyColor:'#fff',padding:13,cornerRadius:11,titleFont:{size:14,weight:'700'},bodyFont:{size:14,weight:'700'},callbacks:{label(context){const value=context.chart.options.indexAxis==='y'?context.parsed.x:context.parsed.y??context.parsed;return ' '+context.label+': '+shown(value,context.dataset.unit||'',context.dataset.estimated?.[context.dataIndex])}}};
+  const make=(canvasId,dataId,type,indexAxis='x')=>{const canvas=document.getElementById(canvasId);if(!canvas)return;const data=load(dataId),dataset=data.datasets[0];dataset.borderWidth=0;dataset.borderRadius=type==='bar'?10:0;dataset.borderSkipped=false;dataset.maxBarThickness=40;if(type==='doughnut'){dataset.hoverOffset=8;dataset.spacing=3}const horizontal=indexAxis==='y';const options={responsive:true,maintainAspectRatio:false,indexAxis,animation:{duration:850,easing:'easeOutQuart'},layout:{padding:horizontal?{top:10,right:10,bottom:10,left:4}:{top:10,right:10,bottom:6,left:4}},plugins:{legend:{display:type==='doughnut',position:'bottom',labels:{color:ink,usePointStyle:true,pointStyle:'circle',padding:18,font:{size:mobile?12:14,weight:'700'}}},tooltip}};if(type==='bar')options.scales=horizontal?{x:{beginAtZero:true,border:{display:false},grid:{color:line},ticks:{color:muted,font:{size:mobile?11:13,weight:'700'}}},y:{border:{display:false},grid:{display:false},ticks:{color:ink,autoSkip:false,font:{size:mobile?12:14,weight:'700'}}}}:{x:{border:{display:false},grid:{display:false},ticks:{color:ink,maxRotation:0,font:{size:mobile?11:13,weight:'700'}}},y:{beginAtZero:true,border:{display:false},grid:{color:line},ticks:{color:muted,font:{size:mobile?11:13,weight:'700'}}}};if(type==='doughnut')options.cutout='66%';new Chart(canvas,{type,data,options});canvas.closest('.chartviz').classList.add('chart-ready')};
+  make('chartMarket','chartMarketData','bar','y');make('chartAudience','chartAudienceData','doughnut');make('chartEconomy','chartEconomyData','bar');make('chartVolume','chartVolumeData','bar');make('chartTrust','chartTrustData','bar','y');make('chartReach','chartReachData','bar');make('chartRoadmap','chartRoadmapData','bar','y');
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+})();
 </script>
-</body>
-</html>
+<script>
+(async()=>{
+  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  if(document.fonts&&document.fonts.ready)await Promise.race([document.fonts.ready,pause(2500)]);
+  await Promise.race([window.__BOT_CHARTS_READY__||Promise.resolve(),pause(4500)]);
+  const images=[...document.images];
+  await Promise.race([Promise.allSettled(images.map(image=>image.complete?Promise.resolve():image.decode())),pause(3500)]);
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  document.documentElement.dataset.pdfLayout='single-page-screen';
+  window.__BOT_PRESENT_READY__=true;
+})();
+</script>

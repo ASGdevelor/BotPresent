@@ -1,6 +1,6 @@
 import { Bot, GrammyError, HttpError, InputFile, type Context } from "grammy";
 import { BUTTONS, MENU_TEXT } from "./constants";
-import { createLeadResultKeyboard, createMainKeyboard, createPresentationKeyboard } from "./keyboard";
+import { createAiBloggersKeyboard, createLeadResultKeyboard, createMainKeyboard, createPresentationKeyboard } from "./keyboard";
 import {
   isCompleteLeadCriteria,
   LEAD_PROMPTS,
@@ -27,6 +27,9 @@ import { normalizeTopic, safeFilePart } from "./utils";
 interface PresentationSession {
   kind: "presentation";
   action: "create" | "edit";
+  step?: "website" | "aiMode";
+  website?: string;
+  editOptions?: PresentationEditOptions;
 }
 
 interface LeadGenerationSession {
@@ -154,21 +157,21 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
 
   bot.hears(BUTTONS.createPresentation, async (ctx) => {
     if (!ctx.from) return;
-    sessions.set(sessionKey(ctx.chat.id, ctx.from.id), { kind: "presentation", action: "create" });
+    sessions.set(sessionKey(ctx.chat.id, ctx.from.id), { kind: "presentation", action: "create", step: "website" });
     await reply(ctx, [
       "Отправьте адрес сайта компании. Я соберу название, описание, направления, изображения, фирменные цвета и проверяемые цифры для графиков.",
       "Формат: https://site.ru тема 1 (если тему не указать, используется схема 1).",
       "",
       presentationThemeList(),
       "",
-      "После создания можно отдельно менять тему, шрифт, четыре изображения и текст каждой из восьми PDF-страниц.",
+      "После создания можно отдельно менять тему, шрифт, четыре изображения и текст каждого из восьми разделов презентации.",
       "Для отмены: /cancel",
     ].join("\n"));
   });
 
   const presentationListText = (records: PresentationRecord[]) => records.length === 0
     ? "У вас пока нет презентаций."
-    : records.map((record) => `${record.id} — ${record.companyName} — ${record.website} — тема ${record.preferences?.themeId ?? "1"}, ${record.preferences?.fontFamily ?? "Open Sans"}`).join("\n");
+    : records.map((record) => `${record.id} — ${record.companyName} — ${record.website} — тема ${record.preferences?.themeId ?? "1"}, ${record.preferences?.fontFamily ?? "Open Sans"}, AI-блогеры: ${record.preferences?.sellAiBloggers === false ? "нет" : "да"}`).join("\n");
 
   bot.hears(BUTTONS.myPresentations, async (ctx) => {
     if (!ctx.from) return;
@@ -197,6 +200,8 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
       "ID тема 1",
       "ID шрифт Montserrat",
       "ID картинка 2 https://site.ru/image.jpg",
+      "ID AI-блогеры да",
+      "ID AI-блогеры нет",
       "ID страница 3 Новый текст для страницы",
       "ID страница 3 очистить",
       "ID сайт https://new-site.ru",
@@ -284,21 +289,43 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
 
     if (session.kind === "presentation") {
       const input = normalizeTopic(ctx.message.text);
-      if (input.length < 3) {
+      if (input.length < 3 && !(session.action === "create" && session.step === "aiMode")) {
         await reply(ctx, "Адрес или ID слишком короткий.");
         return;
       }
-      let website = input;
+      let website = session.website ?? input;
       let recordId: string | undefined;
-      let editOptions: PresentationEditOptions | undefined;
+      let editOptions: PresentationEditOptions | undefined = session.editOptions;
       if (session.action === "create") {
-        const creation = input.match(/^(\S+?)(?:\s+тема\s+(\d{1,2}))?$/i);
-        if (!creation) {
-          await reply(ctx, "Отправьте ссылку в формате: https://site.ru тема 1");
+        if (session.step === "aiMode") {
+          const yes = input === BUTTONS.aiBloggersYes || /^(?:да|yes|прода[её]м|ai)$/i.test(input);
+          const no = input === BUTTONS.aiBloggersNo || /^(?:нет|no|обычная|без ai)$/i.test(input);
+          if (!yes && !no) {
+            await reply(ctx, "Выберите режим: продаём AI-блогеров — да или нет.", { reply_markup: createAiBloggersKeyboard() });
+            return;
+          }
+          if (!session.website) {
+            session.step = "website";
+            sessions.set(key, session);
+            await reply(ctx, "Адрес сайта не сохранён. Отправьте URL ещё раз.");
+            return;
+          }
+          website = session.website;
+          editOptions = { ...(session.editOptions ?? {}), sellAiBloggers: yes };
+        } else {
+          const creation = input.match(/^(\S+?)(?:\s+тема\s+(\d{1,2}))?$/i);
+          if (!creation) {
+            await reply(ctx, "Отправьте ссылку в формате: https://site.ru тема 1");
+            return;
+          }
+          website = creation[1]!;
+          session.step = "aiMode";
+          session.website = website;
+          session.editOptions = creation[2] ? { themeId: creation[2] } : {};
+          sessions.set(key, session);
+          await reply(ctx, "Продаём этой компании AI-блогеров?", { reply_markup: createAiBloggersKeyboard() });
           return;
         }
-        website = creation[1]!;
-        if (creation[2]) editOptions = { themeId: creation[2] };
       }
       if (session.action === "edit") {
         const [id = "", ...commandParts] = input.split(/\s+/);
@@ -314,6 +341,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
         const theme = command.match(/^тема\s+(\d{1,2})$/i);
         const font = command.match(/^шрифт\s+(.+)$/i);
         const image = command.match(/^картинка\s+([1-4])\s+(https?:\/\/\S+)$/i);
+        const aiBloggers = command.match(/^ai-блогеры\s+(да|нет)$/i);
         const page = command.match(/^страница\s+([1-8])(?:\s+([\s\S]*))?$/i);
         const site = command.match(/^сайт\s+(https?:\/\/\S+)$/i);
         if (!command) {
@@ -324,6 +352,8 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
           editOptions = { fontFamily: font[1] };
         } else if (image) {
           editOptions = { productImage: { index: Number(image[1]), url: image[2]! } };
+        } else if (aiBloggers) {
+          editOptions = { sellAiBloggers: aiBloggers[1]!.toLocaleLowerCase("ru") === "да" };
         } else if (page) {
           const text = /^(?:очистить|удалить|-)$/i.test(page[2]?.trim() ?? "") ? "" : (page[2] ?? "");
           editOptions = { pageEdit: { page: Number(page[1]), text } };
@@ -332,7 +362,7 @@ export function createBot(token: string, history = new MessageHistory()): Bot {
         } else if (/^https?:\/\/\S+$/i.test(command)) {
           website = command;
         } else {
-          await reply(ctx, "Не понял правку. Используйте: ID тема N, ID шрифт Название, ID картинка N URL, ID страница N текст или ID сайт URL.");
+          await reply(ctx, "Не понял правку. Используйте: ID тема N, ID шрифт Название, ID картинка N URL, ID AI-блогеры да/нет, ID страница N текст или ID сайт URL.");
           return;
         }
       }
