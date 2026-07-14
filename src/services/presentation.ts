@@ -86,6 +86,8 @@ export interface PresentationPreferences {
   themeId: PresentationThemeId;
   fontFamily: string;
   sellAiBloggers: boolean;
+  /** Постоянный seed варианта AI-видео для конкретного ID презентации. */
+  avatarSeed: string;
   productImages: Record<string, string>;
   pageEdits: Record<string, string>;
   sectionEdits: Record<string, PresentationSectionEdit>;
@@ -211,6 +213,7 @@ function defaultPreferences(existing?: Partial<PresentationPreferences>): Presen
     themeId,
     fontFamily,
     sellAiBloggers: existing?.sellAiBloggers ?? true,
+    avatarSeed: clean(existing?.avatarSeed ?? "", 120),
     productImages: { ...(existing?.productImages ?? {}) },
     pageEdits: { ...(existing?.pageEdits ?? {}) },
     sectionEdits: Object.fromEntries(Object.entries(existing?.sectionEdits ?? {}).map(([page, edit]) => [page, { ...edit }])),
@@ -1588,11 +1591,12 @@ export function renderPresentationTemplate(
     "Преимущества для клиента",
     "Как начать работу",
   ], 10, 100);
+  const avatarSeed = preferences.avatarSeed || `${facts.website}|${generatedAt.toISOString()}`;
   const aiBloggerGifs = preferences.sellAiBloggers && template.includes("{{VIDEO_1_MEDIA}}")
     ? Array.from({ length: 3 }, (_, index) => createAiBloggerGifDataUri(
       theme.primary,
       theme.secondary,
-      `${facts.companyName}|${industry}|${itemAt(services, index, industry)}|${generatedAt.toISOString()}`,
+      `${avatarSeed}|${facts.companyName}|${industry}|${itemAt(services, index, industry)}`,
       index,
     ))
     : [];
@@ -2212,6 +2216,7 @@ export async function createWebsitePresentation(
   }
   facts ??= await collectWebsiteFacts(requestedWebsite, progress);
   const id = existing?.id ?? `${safeFilePart(new URL(facts.website).hostname)}-${randomUUID().slice(0, 8)}`;
+  if (!preferences.avatarSeed) preferences.avatarSeed = id;
   const targetDir = path.join(userRoot(userId), id);
   await mkdir(targetDir, { recursive: true });
   // Копируем шаблонные ассеты (css, js, шрифты), но index.html перезапишем

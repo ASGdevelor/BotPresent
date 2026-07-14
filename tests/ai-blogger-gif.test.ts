@@ -46,4 +46,19 @@ describe("AI-blogger GIF", () => {
     expect(frameCount(gif)).toBe(15);
     expect(gif.length).toBeGreaterThan(800_000);
   });
+
+  test("creates deterministic business-specific clothing and background palettes", () => {
+    const medical = createAiBloggerGifDataUri("#146c94", "#d8f0fa", "seed-a|стоматологическая клиника", 2);
+    const medicalAgain = createAiBloggerGifDataUri("#146c94", "#d8f0fa", "seed-a|стоматологическая клиника", 2);
+    const finance = createAiBloggerGifDataUri("#a85c00", "#ffebc7", "seed-b|банк финансы инвестиции", 2);
+    const fashion = createAiBloggerGifDataUri("#b23a65", "#ffe0eb", "seed-c|мода одежда дизайн", 2);
+
+    expect(medicalAgain).toBe(medical);
+    expect(finance).not.toBe(medical);
+    expect(fashion).not.toBe(finance);
+    for (const value of [medical, finance, fashion]) {
+      const gif = Buffer.from(value.split(",", 2)[1]!, "base64");
+      expect(frameCount(gif)).toBe(15);
+    }
+  });
 });

@@ -333,6 +333,18 @@ describe("presentation template", () => {
     expect(html.match(/<svg class="business-chart"/g) ?? []).toHaveLength(7);
   });
 
+  test("keeps avatar variants stable for one presentation ID and changes them for another", () => {
+    const template = "{{VIDEO_1_MEDIA}}|{{VIDEO_2_MEDIA}}|{{VIDEO_3_MEDIA}}";
+    const first = renderPresentationTemplate(template, facts, undefined, new Date("2026-01-01T00:00:00Z"), { avatarSeed: "presentation-a" });
+    const edited = renderPresentationTemplate(template, facts, undefined, new Date("2027-05-05T00:00:00Z"), { avatarSeed: "presentation-a" });
+    const another = renderPresentationTemplate(template, facts, undefined, new Date("2026-01-01T00:00:00Z"), { avatarSeed: "presentation-b" });
+    const gifs = (html: string) => html.match(/data:image\/gif;base64,[A-Za-z0-9+/=]+/g) ?? [];
+
+    expect(gifs(first)).toEqual(gifs(edited));
+    expect(gifs(first)).not.toEqual(gifs(another));
+    expect(gifs(first)).toHaveLength(3);
+  });
+
   test("applies isolated heading, text and photo overrides to one section", async () => {
     const template = await readFile(path.resolve(import.meta.dir, "..", "Generic", "index3.html"), "utf8");
     const html = renderPresentationTemplate(template, facts, undefined, new Date("2026-07-11T00:00:00Z"), {
