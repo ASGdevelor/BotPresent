@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { load } from "cheerio";
 import { createAiBloggerGifDataUri } from "./ai-blogger-gif";
+import { generateBusinessAiVideoGifs } from "./ai-video-generation";
 import { fetchPublicCss, fetchPublicHtml, fetchPublicImage, fetchPublicXml, parsePublicHttpUrl, PublicWebError } from "./public-web";
 import { safeFilePart } from "../utils";
 
@@ -78,6 +79,8 @@ export interface CompetitorProfile {
 
 export interface PresentationContext {
   leadRelevance?: string;
+  /** Уже созданные под этот ID полноцветные GIF из AI-video API. */
+  aiBloggerGifs?: string[];
 }
 
 export type PresentationThemeId = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10";
@@ -1592,13 +1595,16 @@ export function renderPresentationTemplate(
     "Как начать работу",
   ], 10, 100);
   const avatarSeed = preferences.avatarSeed || `${facts.website}|${generatedAt.toISOString()}`;
+  const suppliedAiVideoGifs = context?.aiBloggerGifs?.filter(value => value.startsWith("data:image/gif;base64,"));
   const aiBloggerGifs = preferences.sellAiBloggers && template.includes("{{VIDEO_1_MEDIA}}")
-    ? Array.from({ length: 3 }, (_, index) => createAiBloggerGifDataUri(
-      theme.primary,
-      theme.secondary,
-      `${avatarSeed}|${facts.companyName}|${industry}|${itemAt(services, index, industry)}`,
-      index,
-    ))
+    ? suppliedAiVideoGifs?.length === 3
+      ? suppliedAiVideoGifs
+      : Array.from({ length: 3 }, (_, index) => createAiBloggerGifDataUri(
+        theme.primary,
+        theme.secondary,
+        `${avatarSeed}|${facts.companyName}|${industry}|${itemAt(services, index, industry)}`,
+        index,
+      ))
     : [];
   const fallbackLogo = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="360" height="96"><rect width="100%" height="100%" rx="16" fill="${theme.secondary}"/><text x="50%" y="56%" text-anchor="middle" font-family="Arial" font-size="24" font-weight="700" fill="${theme.primary}">${escapeHtml(clean(facts.companyName, 28))}</text></svg>`)}`;
   const logoUrl = escapeHtml(facts.logoUrl ?? fallbackLogo);
@@ -2221,8 +2227,30 @@ export async function createWebsitePresentation(
   await mkdir(targetDir, { recursive: true });
   // Копируем шаблонные ассеты (css, js, шрифты), но index.html перезапишем
   await cp(await templateRoot(), targetDir, { recursive: true, force: true }).catch(() => undefined);
+  let aiBloggerGifs: string[] | undefined;
+  if (preferences.sellAiBloggers) {
+    const avatarTheme = resolveTheme(facts, preferences);
+    try {
+      aiBloggerGifs = await generateBusinessAiVideoGifs({
+        companyName: facts.companyName,
+        website: facts.website,
+        industry: facts.industry ?? facts.services[0] ?? "бизнес",
+        services: facts.services,
+        ...(facts.productImages?.[0] ? { productImageUrl: facts.productImages[0] } : {}),
+        primaryColor: avatarTheme.primary,
+        secondaryColor: avatarTheme.secondary,
+        presentationSeed: preferences.avatarSeed,
+      }, targetDir, message => progress?.(55, message));
+    } catch (error) {
+      console.error("AI-video generation failed; using bundled GIF fallback", error);
+      await progress?.(55, "AI-video недоступно — использую автономные реалистичные GIF");
+    }
+  }
   await progress?.(60, "Заполняю шаблон");
-  const htmlPath = await renderHtml(facts, targetDir, context, preferences);
+  const htmlPath = await renderHtml(facts, targetDir, {
+    ...context,
+    ...(aiBloggerGifs ? { aiBloggerGifs } : {}),
+  }, preferences);
   await progress?.(72, "HTML-версия готова");
   const pdfPath = path.join(targetDir, `${safeFilePart(facts.companyName)}.pdf`);
   await progress?.(78, "Создаю PDF-версию");
